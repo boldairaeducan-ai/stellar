@@ -18,6 +18,8 @@ public class LevelPlayInitializer : MonoBehaviour
     const int MaxRetries = 3;
 
     [SerializeField] private string appKey = "290385fad";
+    [Tooltip("Opens the LevelPlay Test Suite on device. Only works in Development Builds, never in release builds.")]
+    [SerializeField] private bool launchTestSuite;
 
     public static LevelPlayInitializer Instance { get; private set; }
     public bool IsInitialized { get; private set; }
@@ -83,6 +85,11 @@ public class LevelPlayInitializer : MonoBehaviour
         initStarted = true;
         ApplyPrivacySettings();
 
+#if DEVELOPMENT_BUILD
+        // Test Suite must be enabled BEFORE Init. Compiled out of release builds.
+        if (launchTestSuite) LevelPlay.SetMetaData("is_test_suite", "enable");
+#endif
+
         // Register initialization callbacks before Init()
         LevelPlay.OnInitSuccess += OnInitSuccess;
         LevelPlay.OnInitFailed += OnInitFailed;
@@ -95,6 +102,10 @@ public class LevelPlayInitializer : MonoBehaviour
         Debug.Log("LevelPlay SDK initialized successfully");
         IsInitialized = true;
         Initialized?.Invoke();
+
+#if DEVELOPMENT_BUILD
+        if (launchTestSuite) LevelPlay.LaunchTestSuite();
+#endif
     }
 
     private void OnInitFailed(LevelPlayInitError error)
