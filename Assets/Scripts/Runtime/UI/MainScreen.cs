@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using StellarIdle.Core;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -11,28 +10,35 @@ using UnityEngine.InputSystem.UI;
 namespace StellarIdle.UI
 {
     /// <summary>
-    /// The whole game screen, built from code: currencies, tappable planet, generator list,
-    /// boost / prestige / shop buttons, popups and toasts.
+    /// The game screen, built from code: currencies, tappable planet, boost, tab panels
+    /// (Build / Research / Warp / Goals / Shop), popups, toasts and visual feedback.
     /// </summary>
     public sealed class MainScreen : MonoBehaviour
     {
         static readonly int[] BuyModes = { 1, 10, 0 }; // 0 = max affordable
         const float RefreshInterval = 0.1f;
         const float ToastDuration = 2.2f;
+        const int BuildTab = 0;
 
         GameManager game;
         IdleEconomy Eco => game.Economy;
+        readonly UIContext ctx = new UIContext();
 
         Transform popupRoot;
-        Text creditsText, rateText, crystalsText, darkMatterText, statusText, toastText;
-        Text buyModeLabel, boostLabel, prestigeLabel;
+        Text creditsText, rateText, crystalsText, darkMatterText, toastText, boostLabel, buyModeLabel;
         RectTransform planet, floatLayer;
+        GameObject buyModeButton;
+        Image flash;
+        PunchScale creditsPunch, boostPunch;
         FloatingTextPool floats;
-        readonly List<GeneratorRow> rows = new List<GeneratorRow>();
+        TapParticles particles;
+        TabPanel[] panels;
+        TabBar tabBar;
         Popup offlinePopup;
 
-        int buyModeIndex;
+        int buyModeIndex, currentTab;
         float refreshTimer, toastTimer, planetScale = 1;
+        double displayedCredits;
 
         public static MainScreen Create(GameManager game)
         {
@@ -49,7 +55,8 @@ namespace StellarIdle.UI
             game.ProductDelivered += OnProductDelivered;
             if (game.PendingOffline.HasEarnings) ShowOffline(game.PendingOffline);
             if (!PrivacyConsent.HasGdprAnswer) ShowConsent(); // shown last so it sits on top
-            Refresh();
+            displayedCredits = Eco.State.credits;
+            SelectTab(BuildTab);
         }
 
         void OnDestroy()
@@ -61,21 +68,43 @@ namespace StellarIdle.UI
 
         void Update()
         {
-            planetScale = Mathf.Lerp(planetScale, 1f, Time.unscaledDeltaTime * 12f);
+            float dt = Time.unscaledDeltaTime;
+            planetScale = Mathf.Lerp(planetScale, 1f, dt * 12f);
             planet.localScale = Vector3.one * planetScale;
 
-            refreshTimer -= Time.unscaledDeltaTime;
+            UpdateRollingCredits(dt);
+
+            refreshTimer -= dt;
             if (refreshTimer <= 0) Refresh();
 
             if (toastTimer > 0)
             {
-                toastTimer -= Time.unscaledDeltaTime;
+                toastTimer -= dt;
                 var c = toastText.color;
                 c.a = Mathf.Clamp01(toastTimer / 0.4f);
                 toastText.color = c;
             }
 
+            if (flash.color.a > 0)
+            {
+                var c = flash.color;
+                c.a = Mathf.Max(0, c.a - dt * 1.5f);
+                flash.color = c;
+                if (c.a <= 0) flash.gameObject.SetActive(false);
+            }
+
             if (BackPressed()) Popup.CloseTop();
+        }
+
+        /// <summary>The credit counter rolls up smoothly instead of jumping; spending snaps down.</summary>
+        void UpdateRollingCredits(float dt)
+        {
+            double target = Eco.State.credits;
+            if (target <= displayedCredits || target - displayedCredits < target * 0.002) displayedCredits = target;
+            else displayedCredits += (target - displayedCredits) * Mathf.Clamp01(dt * 10f);
+
+            string text = NumberFormat.Format(displayedCredits);
+            if (creditsText.text != text) creditsText.text = text;
         }
 
         // ---------- Build ----------
@@ -95,39 +124,53 @@ namespace StellarIdle.UI
             scaler.matchWidthOrHeight = 0.5f;
             var root = canvasGo.transform;
 
-            var background = UIFactory.Image("Background", root, Theme.Background);
-            background.rectTransform.Stretch();
-            BuildStars(background.transform);
+            BuildBackground(root);
 
             var safe = UIFactory.Rect("SafeArea", root).Stretch();
             safe.gameObject.AddComponent<SafeArea>();
 
+            ctx.Game = game;
+            ctx.Toast = Toast;
+            ctx.RequestRefresh = Refresh;
+            ctx.OpenPrivacy = OpenPrivacy;
+            ctx.Flash = Flash;
+
             BuildTopBar(safe);
             BuildPlanet(safe);
-            BuildGeneratorList(safe);
-            BuildBottomBar(safe);
+            BuildTabs(safe);
 
             var dropLayer = UIFactory.Rect("BonusDrops", safe).Stretch();
             BonusDropSpawner.Create(dropLayer, game, OnBonusDropTapped);
 
+            particles = UIFactory.Rect("Particles", safe).Stretch().gameObject.AddComponent<TapParticles>();
             floatLayer = UIFactory.Rect("FloatingTexts", safe).Stretch();
             floats = floatLayer.gameObject.AddComponent<FloatingTextPool>();
 
             toastText = UIFactory.Text("Toast", root, "", 44, Theme.Text, TextAnchor.MiddleCenter, FontStyle.Bold);
-            toastText.rectTransform.Anchor(new Vector2(0, 0.2f), new Vector2(1, 0.2f), new Vector2(40, -60), new Vector2(-40, 60));
+            toastText.rectTransform.Anchor(new Vector2(0, 0.72f), new Vector2(1, 0.72f), new Vector2(40, -60), new Vector2(-40, 60));
             toastText.gameObject.AddComponent<Outline>().effectColor = Color.black;
             toastText.color = Color.clear;
 
+            flash = UIFactory.Image("Flash", root, new Color(1, 1, 1, 0));
+            flash.rectTransform.Stretch();
+            flash.gameObject.SetActive(false);
+
             popupRoot = UIFactory.Rect("Popups", root).Stretch();
+            ctx.PopupRoot = popupRoot;
         }
 
-        static void BuildStars(Transform parent)
+        static void BuildBackground(Transform root)
         {
+            var custom = Art.Background;
+            var background = UIFactory.Image("Background", root, custom != null ? Color.white : Theme.Background, custom);
+            background.rectTransform.Stretch();
+            if (custom != null) return;
+
             var rng = new System.Random(42);
             for (int i = 0; i < 80; i++)
             {
                 float size = 3 + (float)rng.NextDouble() * 6;
-                var star = UIFactory.Image("Star", parent, new Color(1, 1, 1, 0.2f + (float)rng.NextDouble() * 0.6f), ProceduralSprites.Circle);
+                var star = UIFactory.Image("Star", background.transform, new Color(1, 1, 1, 0.2f + (float)rng.NextDouble() * 0.6f), ProceduralSprites.Circle);
                 var pos = new Vector2((float)rng.NextDouble(), (float)rng.NextDouble());
                 star.rectTransform.Place(pos, Vector2.zero, new Vector2(size, size));
             }
@@ -135,7 +178,7 @@ namespace StellarIdle.UI
 
         void BuildTopBar(Transform parent)
         {
-            var bar = UIFactory.Rect("TopBar", parent).Anchor(new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -260), Vector2.zero);
+            var bar = UIFactory.Rect("TopBar", parent).Anchor(new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -240), Vector2.zero);
 
             crystalsText = UIFactory.Text("Crystals", bar, "", 34, Theme.Premium, TextAnchor.UpperLeft, FontStyle.Bold);
             crystalsText.rectTransform.Anchor(new Vector2(0, 1), new Vector2(0.5f, 1), new Vector2(30, -70), new Vector2(0, -20));
@@ -144,69 +187,56 @@ namespace StellarIdle.UI
             darkMatterText.rectTransform.Anchor(new Vector2(0.5f, 1), new Vector2(1, 1), new Vector2(0, -70), new Vector2(-30, -20));
 
             creditsText = UIFactory.Text("Credits", bar, "0", 92, Theme.Accent, TextAnchor.MiddleCenter, FontStyle.Bold);
-            creditsText.rectTransform.Anchor(new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -185), new Vector2(0, -70));
+            creditsText.rectTransform.Anchor(new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -180), new Vector2(0, -65));
+            creditsPunch = creditsText.gameObject.AddComponent<PunchScale>();
 
-            rateText = UIFactory.Text("Rate", bar, "", 40, Theme.TextDim);
-            rateText.rectTransform.Anchor(new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -250), new Vector2(0, -185));
+            rateText = UIFactory.Text("Rate", bar, "", 38, Theme.TextDim);
+            rateText.rectTransform.Anchor(new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -235), new Vector2(0, -180));
         }
 
         void BuildPlanet(Transform parent)
         {
-            var img = UIFactory.Image("Planet", parent, Color.white, ProceduralSprites.Planet, raycast: true);
-            planet = img.rectTransform.Anchor(new Vector2(0.5f, 0.56f), new Vector2(0.5f, 0.84f));
+            var img = UIFactory.Image("Planet", parent, Color.white, Art.Planet, raycast: true);
+            planet = img.rectTransform.Anchor(new Vector2(0.5f, 0.6f), new Vector2(0.5f, 0.835f));
             var fitter = img.gameObject.AddComponent<AspectRatioFitter>();
             fitter.aspectMode = AspectRatioFitter.AspectMode.HeightControlsWidth;
             fitter.aspectRatio = 1;
+            img.preserveAspect = true;
             img.gameObject.AddComponent<TapZone>().Tapped += OnPlanetTapped;
 
-            statusText = UIFactory.Text("Status", parent, "", 36, Theme.Accent, TextAnchor.MiddleLeft, FontStyle.Bold);
-            statusText.rectTransform.Anchor(new Vector2(0, 0.495f), new Vector2(0.7f, 0.55f), new Vector2(30, 0), Vector2.zero);
+            var boost = UIFactory.Button("Boost", parent, "", Theme.Ad, OnBoostClicked, out boostLabel, 32);
+            boost.GetComponent<RectTransform>().Anchor(new Vector2(0.03f, 0.545f), new Vector2(0.48f, 0.593f));
+            boostPunch = boost.gameObject.AddComponent<PunchScale>();
 
-            var buyMode = UIFactory.Button("BuyMode", parent, "", Theme.PanelLight, CycleBuyMode, out buyModeLabel, 36);
-            buyMode.GetComponent<RectTransform>().Anchor(new Vector2(0.72f, 0.5f), new Vector2(1, 0.545f), new Vector2(0, 0), new Vector2(-20, 0));
+            var buyMode = UIFactory.Button("BuyMode", parent, "", Theme.PanelLight, CycleBuyMode, out buyModeLabel, 34);
+            buyMode.GetComponent<RectTransform>().Anchor(new Vector2(0.75f, 0.545f), new Vector2(0.97f, 0.593f));
+            buyModeButton = buyMode.gameObject;
         }
 
-        void BuildGeneratorList(Transform parent)
+        void BuildTabs(Transform parent)
         {
-            var scrollRt = UIFactory.Rect("Generators", parent).Anchor(Vector2.zero, new Vector2(1, 0.49f), new Vector2(20, 190), new Vector2(-20, 0));
-            var scroll = scrollRt.gameObject.AddComponent<ScrollRect>();
-            scroll.horizontal = false;
-            scroll.movementType = ScrollRect.MovementType.Clamped;
-            scroll.scrollSensitivity = 30;
+            var area = UIFactory.Rect("Panels", parent).Anchor(Vector2.zero, new Vector2(1, 0.535f), new Vector2(20, 170), new Vector2(-20, 0));
+            panels = new TabPanel[]
+            {
+                new BuildingsPanel(ctx, area),
+                new ResearchPanel(ctx, area),
+                new WarpPanel(ctx, area),
+                new GoalsPanel(ctx, area),
+                new ShopPanel(ctx, area),
+            };
 
-            var viewport = UIFactory.Image("Viewport", scrollRt, Color.clear, raycast: true).rectTransform.Stretch();
-            viewport.gameObject.AddComponent<RectMask2D>();
-
-            var content = UIFactory.Rect("Content", viewport);
-            content.anchorMin = new Vector2(0, 1);
-            content.anchorMax = new Vector2(1, 1);
-            content.pivot = new Vector2(0.5f, 1);
-            content.offsetMin = content.offsetMax = Vector2.zero;
-            var layout = content.gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.spacing = 14;
-            layout.childControlWidth = layout.childControlHeight = true;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = false;
-            content.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            scroll.viewport = viewport;
-            scroll.content = content;
-
-            for (int i = 0; i < Eco.GeneratorCount; i++)
-                rows.Add(new GeneratorRow(content, i, Buy));
+            var bar = UIFactory.Rect("TabBar", parent).Anchor(Vector2.zero, new Vector2(1, 0), new Vector2(12, 12), new Vector2(-12, 158));
+            tabBar = new TabBar(bar, new[] { Strings.TabBuild, Strings.TabResearch, Strings.TabWarp, Strings.TabGoals, Strings.TabShop });
+            tabBar.Selected += SelectTab;
         }
 
-        void BuildBottomBar(Transform parent)
+        void SelectTab(int tab)
         {
-            var bar = UIFactory.Rect("BottomBar", parent).Anchor(Vector2.zero, new Vector2(1, 0), new Vector2(20, 20), new Vector2(-20, 170));
-            var layout = bar.gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 20;
-            layout.childControlWidth = layout.childControlHeight = true;
-            layout.childForceExpandWidth = layout.childForceExpandHeight = true;
-
-            UIFactory.Button("Boost", bar, "", Theme.Ad, OnBoostClicked, out boostLabel, 36);
-            UIFactory.Button("Prestige", bar, "", Theme.Prestige, OnPrestigeClicked, out prestigeLabel, 36);
-            UIFactory.Button("Shop", bar, Strings.ShopButton, Theme.Premium, OpenShop, out _, 40);
+            currentTab = tab;
+            for (int i = 0; i < panels.Length; i++) panels[i].Visible = i == tab;
+            buyModeButton.SetActive(tab == BuildTab);
+            tabBar.SetSelected(tab);
+            Refresh();
         }
 
         static void EnsureEventSystem()
@@ -241,26 +271,22 @@ namespace StellarIdle.UI
             var eco = Eco;
             var state = eco.State;
 
-            creditsText.text = NumberFormat.Format(state.credits);
             rateText.text = $"+{NumberFormat.Format(eco.ProductionPerSecond(now))}{Strings.PerSecond}";
             crystalsText.text = $"{Strings.Crystals}: {state.crystals}";
-            darkMatterText.text = state.darkMatter > 0 ? $"{Strings.DarkMatter}: {NumberFormat.Format(state.darkMatter)}" : "";
-
-            if (eco.IsBoostActive(now))
-                statusText.text = $"{Strings.BoostActive}  {NumberFormat.Duration(eco.BoostRemaining(now))}";
-            else
-                statusText.text = state.totalEarnings < 100 ? Strings.TapHint : "";
-
-            int mode = BuyModes[buyModeIndex];
-            buyModeLabel.text = mode > 0 ? $"x{mode}" : Strings.Max;
-            foreach (var row in rows) row.Refresh(eco, mode, now);
+            darkMatterText.text = state.darkMatterEarned > 0 ? $"{Strings.DarkMatter}: {NumberFormat.Format(state.darkMatter)}" : "";
 
             boostLabel.text = eco.IsBoostActive(now)
-                ? $"{Strings.BoostButton}\n{NumberFormat.Duration(eco.BoostRemaining(now))}"
-                : $"{Strings.BoostButton}\n{(game.SkipsAds ? Strings.BoostFree : Strings.BoostWatch)}";
-            prestigeLabel.text = eco.CanPrestige
-                ? $"{Strings.PrestigeButton}\n+{NumberFormat.Format(eco.PendingDarkMatter)}"
-                : Strings.PrestigeButton;
+                ? $"{Strings.BoostActive}  {NumberFormat.Duration(eco.BoostRemaining(now))}"
+                : state.totalEarnings < 100
+                    ? Strings.TapHint
+                    : $"{Strings.BoostButton}: {(game.SkipsAds ? Strings.BoostFree : Strings.BoostWatch)}";
+
+            int mode = BuyModes[buyModeIndex];
+            ctx.BuyMode = mode;
+            buyModeLabel.text = mode > 0 ? $"x{mode}" : Strings.Max;
+
+            panels[currentTab].Refresh(now);
+            for (int i = 0; i < panels.Length; i++) tabBar.SetBadge(i, panels[i].Badge);
         }
 
         void Toast(string message)
@@ -270,6 +296,13 @@ namespace StellarIdle.UI
             toastTimer = ToastDuration;
         }
 
+        void Flash()
+        {
+            flash.gameObject.SetActive(true);
+            flash.color = new Color(1, 1, 1, 0.9f);
+            creditsPunch.Play(0.2f);
+        }
+
         // ---------- Actions ----------
 
         void OnPlanetTapped(PointerEventData eventData)
@@ -277,19 +310,16 @@ namespace StellarIdle.UI
             double value = Eco.Tap(Clock.Now);
             planetScale = 0.92f;
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(floatLayer, eventData.position, eventData.pressEventCamera, out var local))
+            {
                 floats.Spawn("+" + NumberFormat.Format(value), local);
+                particles.Burst(local);
+            }
         }
 
         void CycleBuyMode()
         {
             buyModeIndex = (buyModeIndex + 1) % BuyModes.Length;
             Refresh();
-        }
-
-        void Buy(int index)
-        {
-            int amount = Eco.ResolveBuyAmount(index, BuyModes[buyModeIndex]);
-            if (Eco.TryBuy(index, amount)) Refresh();
         }
 
         void OnBoostClicked()
@@ -301,83 +331,17 @@ namespace StellarIdle.UI
             }
             game.RequestReward(AdPlacements.Boost, () =>
             {
-                Eco.AddBoost(Clock.Now, Eco.Balance.boostDurationSeconds);
+                Eco.AddBoost(Clock.Now, Eco.BoostDurationSeconds);
                 game.Save();
+                boostPunch.Play(0.12f);
                 Toast(Strings.BoostAdded);
                 Refresh();
             }, () => Toast(Strings.AdUnavailable));
         }
 
-        void OnPrestigeClicked()
-        {
-            var eco = Eco;
-            if (!eco.CanPrestige)
-            {
-                string progress = $"{NumberFormat.Format(eco.State.runEarnings)} / {NumberFormat.Format(eco.PrestigeRequirement)}";
-                Popup.Show(popupRoot, Strings.PrestigeTitle,
-                    string.Format(Strings.PrestigeLockedBody, NumberFormat.Format(eco.PrestigeRequirement), progress),
-                    new Popup.Choice(Strings.Close, Theme.Disabled));
-                return;
-            }
-
-            string body = string.Format(Strings.PrestigeBody,
-                NumberFormat.Format(eco.PendingDarkMatter),
-                eco.Balance.prestigeBonusPerPoint * 100,
-                NumberFormat.Format(eco.State.darkMatter),
-                $"x{eco.PrestigeMultiplier:0.##}");
-            Popup.Show(popupRoot, Strings.PrestigeTitle, body,
-                new Popup.Choice(Strings.PrestigeConfirm, Theme.Prestige, () =>
-                {
-                    double gain = game.DoPrestige();
-                    Toast(string.Format(Strings.PrestigeDone, NumberFormat.Format(gain)));
-                    Refresh();
-                }),
-                new Popup.Choice(Strings.Cancel, Theme.Disabled));
-        }
-
-        void OpenShop()
-        {
-            var eco = Eco;
-            var balance = eco.Balance;
-            var choices = new List<Popup.Choice>();
-
-            if (!eco.State.starterPackOwned)
-                choices.Add(ProductChoice(ProductIds.StarterPack,
-                    string.Format(Strings.StarterName, balance.starterPackCrystals, balance.starterPackBoostHours), Theme.Ad));
-            if (!eco.State.vip)
-                choices.Add(ProductChoice(ProductIds.VipPass, Strings.VipName, Theme.Premium));
-            choices.Add(ProductChoice(ProductIds.CrystalsSmall, string.Format(Strings.CrystalsSmallName, balance.crystalsSmallAmount), Theme.PanelLight));
-            choices.Add(ProductChoice(ProductIds.CrystalsLarge, string.Format(Strings.CrystalsLargeName, balance.crystalsLargeAmount), Theme.PanelLight));
-            choices.Add(new Popup.Choice(
-                string.Format(Strings.TimeWarp, NumberFormat.Format(eco.TimeWarpValue), balance.timeWarpCrystalCost),
-                Theme.Prestige, DoTimeWarp, eco.TimeWarpValue > 0));
-            choices.Add(new Popup.Choice(Strings.Restore, Theme.Disabled, game.Store.RestorePurchases));
-            choices.Add(new Popup.Choice(Strings.PrivacyButton, Theme.Disabled, OpenPrivacy));
-            choices.Add(new Popup.Choice(Strings.Close, Theme.Disabled));
-
-            Popup.Show(popupRoot, Strings.ShopTitle, $"{Strings.Crystals}: {eco.State.crystals}", choices.ToArray());
-        }
-
-        Popup.Choice ProductChoice(string productId, string label, Color color) =>
-            new Popup.Choice($"{label}\n{game.Store.GetPrice(productId)}", color, () =>
-                game.Store.Purchase(productId, ok =>
-                {
-                    if (!ok) Toast(Strings.PurchaseFailed);
-                }));
-
-        void DoTimeWarp()
-        {
-            if (Eco.TryTimeWarp(out double gained))
-            {
-                game.Save();
-                Toast("+" + NumberFormat.Format(gained));
-                Refresh();
-            }
-            else Toast(Strings.NotEnoughCrystals);
-        }
-
         void OnProductDelivered(string productId)
         {
+            creditsPunch.Play(0.15f);
             Toast(Strings.PurchaseThanks);
             Refresh();
         }
@@ -392,6 +356,7 @@ namespace StellarIdle.UI
                     {
                         double gained = Eco.ClaimBonusDrop(Clock.Now);
                         game.Save();
+                        creditsPunch.Play(0.15f);
                         Toast(string.Format(Strings.DropCollected, NumberFormat.Format(gained)));
                         Refresh();
                     }, () => Toast(Strings.AdUnavailable))),

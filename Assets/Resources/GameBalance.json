@@ -26,6 +26,36 @@
     "crystalsLargeAmount": 650,
     "starterPackCrystals": 300,
     "starterPackBoostHours": 8,
+    "researchMultiplier": 3,
+    "researchTiers": [
+        { "unlockOwned": 10,  "costFactor": 50 },
+        { "unlockOwned": 25,  "costFactor": 2000 },
+        { "unlockOwned": 50,  "costFactor": 100000 },
+        { "unlockOwned": 100, "costFactor": 100000000 },
+        { "unlockOwned": 200, "costFactor": 10000000000000 }
+    ],
+    "globalResearch": [
+        { "cost": 100000,            "multiplier": 2 },
+        { "cost": 100000000,         "multiplier": 2 },
+        { "cost": 100000000000,      "multiplier": 2 },
+        { "cost": 100000000000000,   "multiplier": 2 },
+        { "cost": 100000000000000000, "multiplier": 2 }
+    ],
+    "darkMatterUpgrades": [
+        { "id": "engines",   "name": "Stellar Engines",   "effect": "production",   "value": 0.25, "baseCost": 1, "costGrowth": 1.6, "maxLevel": 0 },
+        { "id": "salvage",   "name": "Salvage Crews",     "effect": "bonusDrop",    "value": 0.25, "baseCost": 1, "costGrowth": 1.8, "maxLevel": 8 },
+        { "id": "fingers",   "name": "Quantum Fingers",   "effect": "tap",          "value": 0.02, "baseCost": 1, "costGrowth": 1.5, "maxLevel": 10 },
+        { "id": "logistics", "name": "Orbital Logistics", "effect": "cost",         "value": 0.05, "baseCost": 2, "costGrowth": 1.8, "maxLevel": 10 },
+        { "id": "headstart", "name": "Head Start",        "effect": "startCredits", "value": 1000, "baseCost": 2, "costGrowth": 2.2, "maxLevel": 6 },
+        { "id": "cryo",      "name": "Cryo Vaults",       "effect": "offlineHours", "value": 2,    "baseCost": 3, "costGrowth": 2,   "maxLevel": 4 },
+        { "id": "overdrive", "name": "Overdrive Reactor", "effect": "boostHours",   "value": 1,    "baseCost": 3, "costGrowth": 2,   "maxLevel": 4 }
+    ],
+    "achievementOwnedThresholds": [25, 100, 250],
+    "achievementOwnedRewards": [2, 5, 10],
+    "achievementEarningsThresholds": [10000, 10000000, 10000000000, 10000000000000, 10000000000000000, 10000000000000000000],
+    "achievementEarningsRewards": [5, 5, 10, 10, 15, 20],
+    "achievementWarpThresholds": [1, 3, 10, 25],
+    "achievementWarpRewards": [10, 15, 20, 30],
     "generators": [
         { "id": "drone",     "name": "Mining Drone",        "baseCost": 15,           "costGrowth": 1.15, "baseProduction": 0.5 },
         { "id": "harvester", "name": "Asteroid Harvester",  "baseCost": 120,          "costGrowth": 1.15, "baseProduction": 4 },

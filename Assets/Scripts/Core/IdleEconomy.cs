@@ -24,9 +24,9 @@ namespace StellarIdle.Core
 
     /// <summary>
     /// All game rules. Pure C# (no UnityEngine), time is always passed in as unix seconds,
-    /// which keeps it deterministic and unit-testable.
+    /// which keeps it deterministic and unit-testable. Split by system across IdleEconomy.*.cs files.
     /// </summary>
-    public sealed class IdleEconomy
+    public sealed partial class IdleEconomy
     {
         const int MaxBulkBuy = 100000;
 
@@ -40,6 +40,8 @@ namespace StellarIdle.Core
             Balance.Validate();
             State.Sanitize();
             State.EnsureGenerators(Balance.generators);
+            BuildResearch();
+            BuildAchievements();
         }
 
         // ---------- Generators ----------
@@ -49,12 +51,15 @@ namespace StellarIdle.Core
         public int Owned(int i) => State.generators[i].count;
         public bool IsUnlocked(int i) => i == 0 || Owned(i) > 0 || Owned(i - 1) > 0;
 
+        /// <summary>Price of the next single unit.</summary>
+        double NextUnitCost(int i) => Def(i).baseCost * BuildingCostMultiplier * Math.Pow(Def(i).costGrowth, Owned(i));
+
         /// <summary>Total cost of buying <paramref name="amount"/> units (geometric series).</summary>
         public double CostOf(int i, int amount)
         {
             if (amount <= 0) return 0;
             var d = Def(i);
-            double first = d.baseCost * Math.Pow(d.costGrowth, Owned(i));
+            double first = NextUnitCost(i);
             if (d.costGrowth - 1 < 1e-9) return first * amount;
             return first * (Math.Pow(d.costGrowth, amount) - 1) / (d.costGrowth - 1);
         }
@@ -62,7 +67,7 @@ namespace StellarIdle.Core
         public int MaxAffordable(int i)
         {
             var d = Def(i);
-            double first = d.baseCost * Math.Pow(d.costGrowth, Owned(i));
+            double first = NextUnitCost(i);
             if (State.credits < first) return 0;
 
             double n = d.costGrowth - 1 < 1e-9
@@ -82,7 +87,9 @@ namespace StellarIdle.Core
         {
             if (!CanAfford(i, amount)) return false;
             State.credits -= CostOf(i, amount);
-            State.generators[i].count += amount;
+            var g = State.generators[i];
+            g.count += amount;
+            g.best = Math.Max(g.best, g.count);
             return true;
         }
 
@@ -97,6 +104,18 @@ namespace StellarIdle.Core
             return m;
         }
 
+        /// <summary>Previous milestone threshold (0 if none), for progress bars.</summary>
+        public int PreviousMilestone(int owned)
+        {
+            int previous = 0;
+            foreach (int t in Balance.milestones)
+            {
+                if (owned < t) break;
+                previous = t;
+            }
+            return previous;
+        }
+
         /// <summary>Next milestone threshold, or -1 when all are reached.</summary>
         public int NextMilestone(int owned)
         {
@@ -107,11 +126,17 @@ namespace StellarIdle.Core
 
         // ---------- Production ----------
 
-        public double PrestigeMultiplier => 1 + State.darkMatter * Balance.prestigeBonusPerPoint;
-        public double PermanentMultiplier => PrestigeMultiplier * (State.vip ? Balance.vipMultiplier : 1);
+        /// <summary>Passive bonus from all Dark Matter ever earned (spending it in the tree costs nothing).</summary>
+        public double PrestigeMultiplier => 1 + State.darkMatterEarned * Balance.prestigeBonusPerPoint;
+
+        public double PermanentMultiplier =>
+            PrestigeMultiplier * DarkMatterProductionMultiplier * (State.vip ? Balance.vipMultiplier : 1);
+
         public double GlobalMultiplier(long now) => PermanentMultiplier * (IsBoostActive(now) ? Balance.boostMultiplier : 1);
 
-        public double BaseGeneratorProduction(int i) => Def(i).baseProduction * Owned(i) * MilestoneMultiplier(Owned(i));
+        /// <summary>Generator output before global multipliers: units x milestones x research.</summary>
+        public double BaseGeneratorProduction(int i) =>
+            Def(i).baseProduction * Owned(i) * MilestoneMultiplier(Owned(i)) * ResearchMultiplier(i) * GlobalResearchMultiplier;
         public double GeneratorProduction(int i, long now) => BaseGeneratorProduction(i) * GlobalMultiplier(now);
 
         double RawProduction()
@@ -124,7 +149,7 @@ namespace StellarIdle.Core
         public double ProductionPerSecond(long now) => RawProduction() * GlobalMultiplier(now);
 
         public double TapValue(long now) =>
-            Balance.tapBaseValue * GlobalMultiplier(now) + ProductionPerSecond(now) * Balance.tapProductionShare;
+            Balance.tapBaseValue * GlobalMultiplier(now) + ProductionPerSecond(now) * (Balance.tapProductionShare + DarkMatterTapShare);
 
         public double Tap(long now)
         {
@@ -148,7 +173,8 @@ namespace StellarIdle.Core
 
         // ---------- Offline ----------
 
-        public double OfflineCapSeconds => (State.vip ? Balance.vipOfflineMaxHours : Balance.offlineMaxHours) * 3600;
+        public double OfflineCapSeconds =>
+            ((State.vip ? Balance.vipOfflineMaxHours : Balance.offlineMaxHours) + DarkMatterOfflineHours) * 3600;
 
         public OfflineReport ComputeOffline(long now)
         {
@@ -178,13 +204,16 @@ namespace StellarIdle.Core
 
         public bool IsBoostActive(long now) => State.boostEndsAtUnix > now;
         public double BoostRemaining(long now) => Math.Max(0, State.boostEndsAtUnix - now);
-        public bool CanAddBoost(long now) => BoostRemaining(now) < Balance.boostMaxSeconds - 60;
+        /// <summary>Duration given by one ad boost (Dark Matter "boostHours" extends it).</summary>
+        public double BoostDurationSeconds => Balance.boostDurationSeconds + DarkMatterBoostHours * 3600;
+        public double BoostMaxSeconds => Balance.boostMaxSeconds + DarkMatterBoostHours * 3600 * 3;
+        public bool CanAddBoost(long now) => BoostRemaining(now) < BoostMaxSeconds - 60;
 
         public void AddBoost(long now, double seconds)
         {
             long start = Math.Max(State.boostEndsAtUnix, now);
             long end = start + (long)seconds;
-            State.boostEndsAtUnix = Math.Min(end, now + (long)Balance.boostMaxSeconds);
+            State.boostEndsAtUnix = Math.Min(end, now + (long)BoostMaxSeconds);
         }
 
         // ---------- Bonus drops (rewarded ad) ----------
@@ -193,7 +222,8 @@ namespace StellarIdle.Core
 
         /// <summary>Credits a bonus drop gives right now: a few minutes of production, never less than the floor.</summary>
         public double BonusDropReward =>
-            Math.Max(Balance.bonusDropMinReward, RawProduction() * PermanentMultiplier * Balance.bonusDropProductionSeconds);
+            Math.Max(Balance.bonusDropMinReward, RawProduction() * PermanentMultiplier * Balance.bonusDropProductionSeconds)
+            * DarkMatterBonusDropMultiplier;
 
         /// <summary>False once the hourly cap is reached (counted per rolling one-hour window, persisted).</summary>
         public bool CanSpawnBonusDrop(long now) =>
@@ -221,15 +251,22 @@ namespace StellarIdle.Core
         /// <summary>Earnings needed this run to be able to prestige for the first point.</summary>
         public double PrestigeRequirement => Balance.prestigeDivisor;
 
+        /// <summary>Production multiplier the player would have right after warping now.</summary>
+        public double PrestigeMultiplierAfterWarp =>
+            1 + (State.darkMatterEarned + PendingDarkMatter) * Balance.prestigeBonusPerPoint;
+
         public double Prestige()
         {
             double gain = PendingDarkMatter;
             if (gain < 1) return 0;
             State.darkMatter += gain;
-            State.credits = 0;
+            State.darkMatterEarned += gain;
             State.runEarnings = 0;
             State.prestigeCount++;
             foreach (var g in State.generators) g.count = 0;
+            State.research.Clear();
+            ReloadResearched();
+            State.credits = StartingCredits;
             return gain;
         }
 

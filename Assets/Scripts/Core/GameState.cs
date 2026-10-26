@@ -8,6 +8,14 @@ namespace StellarIdle.Core
     {
         public string id;
         public int count;
+        public int best; // highest count ever reached (kept through prestige, used by achievements)
+    }
+
+    [Serializable]
+    public class UpgradeLevel
+    {
+        public string id;
+        public int level;
     }
 
     /// <summary>
@@ -16,13 +24,14 @@ namespace StellarIdle.Core
     [Serializable]
     public class GameState
     {
-        public const int CurrentVersion = 1;
+        public const int CurrentVersion = 2;
 
         public int version = CurrentVersion;
         public double credits;
         public double runEarnings;      // earned since last prestige
         public double totalEarnings;    // earned ever
-        public double darkMatter;       // prestige currency
+        public double darkMatter;       // prestige currency, spendable
+        public double darkMatterEarned; // all Dark Matter ever earned (drives the passive bonus)
         public long crystals;           // premium currency
         public int prestigeCount;
         public long lastSeenUnix;
@@ -32,6 +41,9 @@ namespace StellarIdle.Core
         public bool vip;
         public bool starterPackOwned;
         public List<OwnedGenerator> generators = new List<OwnedGenerator>();
+        public List<string> research = new List<string>();                 // reset on prestige
+        public List<UpgradeLevel> darkMatterUpgrades = new List<UpgradeLevel>();
+        public List<string> achievementsClaimed = new List<string>();
 
         public static GameState CreateNew(long nowUnix) => new GameState { lastSeenUnix = nowUnix };
 
@@ -41,15 +53,19 @@ namespace StellarIdle.Core
         /// </summary>
         public void EnsureGenerators(GeneratorDef[] defs)
         {
-            var counts = new Dictionary<string, int>();
+            var known = new Dictionary<string, OwnedGenerator>();
             if (generators != null)
                 foreach (var g in generators)
                     if (g != null && !string.IsNullOrEmpty(g.id))
-                        counts[g.id] = Math.Max(0, g.count);
+                        known[g.id] = g;
 
             generators = new List<OwnedGenerator>(defs.Length);
             foreach (var d in defs)
-                generators.Add(new OwnedGenerator { id = d.id, count = counts.TryGetValue(d.id, out var c) ? c : 0 });
+            {
+                int count = known.TryGetValue(d.id, out var old) ? Math.Max(0, old.count) : 0;
+                int best = old != null ? Math.Max(old.best, count) : count;
+                generators.Add(new OwnedGenerator { id = d.id, count = count, best = best });
+            }
         }
 
         /// <summary>Repairs corrupted or tampered values after loading.</summary>
@@ -62,7 +78,14 @@ namespace StellarIdle.Core
             if (crystals < 0) crystals = 0;
             if (prestigeCount < 0) prestigeCount = 0;
             if (bonusDropsInWindow < 0) bonusDropsInWindow = 0;
+            darkMatterEarned = Clean(darkMatterEarned);
             if (generators == null) generators = new List<OwnedGenerator>();
+            research ??= new List<string>();
+            darkMatterUpgrades ??= new List<UpgradeLevel>();
+            achievementsClaimed ??= new List<string>();
+
+            if (version < 2) darkMatterEarned = Math.Max(darkMatterEarned, darkMatter); // v1 had no spending
+            version = CurrentVersion;
         }
 
         static double Clean(double v) => double.IsNaN(v) || double.IsInfinity(v) || v < 0 ? 0 : v;

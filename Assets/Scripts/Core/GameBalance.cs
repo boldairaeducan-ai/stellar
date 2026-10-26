@@ -16,6 +16,46 @@ namespace StellarIdle.Core
         public double baseProduction;
     }
 
+    /// <summary>Per-generator research tier: unlocked at N owned, costs baseCost x costFactor.</summary>
+    [Serializable]
+    public class ResearchTierDef
+    {
+        public int unlockOwned;
+        public double costFactor;
+    }
+
+    /// <summary>Research boosting every generator.</summary>
+    [Serializable]
+    public class GlobalResearchDef
+    {
+        public double cost;
+        public double multiplier = 2;
+    }
+
+    /// <summary>Permanent upgrade bought with Dark Matter. See <see cref="DarkMatterEffect"/> for effect names.</summary>
+    [Serializable]
+    public class DarkMatterUpgradeDef
+    {
+        public string id;
+        public string name;
+        public string effect;
+        public double value;
+        public double baseCost = 1;
+        public double costGrowth = 1.5;
+        public int maxLevel; // 0 = unlimited
+    }
+
+    public static class DarkMatterEffect
+    {
+        public const string Production = "production";      // +value x level production
+        public const string Tap = "tap";                    // +value x level share of production per tap
+        public const string Cost = "cost";                  // buildings cost (1 - value)^level
+        public const string StartCredits = "startCredits";  // start each galaxy with value x 10^(level-1) credits
+        public const string OfflineHours = "offlineHours";  // +value x level hours of offline cap
+        public const string BoostHours = "boostHours";      // +value x level hours per ad boost (and max)
+        public const string BonusDrop = "bonusDrop";        // +value x level cargo pod reward
+    }
+
     /// <summary>
     /// Every tunable number of the game lives here so balancing never requires a code change
     /// (and can later be driven by Remote Config).
@@ -69,6 +109,22 @@ namespace StellarIdle.Core
         public long starterPackCrystals = 300;
         public double starterPackBoostHours = 8;
 
+        // Research (credits, reset on prestige)
+        public double researchMultiplier = 3;
+        public ResearchTierDef[] researchTiers = Array.Empty<ResearchTierDef>();
+        public GlobalResearchDef[] globalResearch = Array.Empty<GlobalResearchDef>();
+
+        // Dark Matter tree (permanent)
+        public DarkMatterUpgradeDef[] darkMatterUpgrades = Array.Empty<DarkMatterUpgradeDef>();
+
+        // Achievements (crystal rewards)
+        public int[] achievementOwnedThresholds = Array.Empty<int>();
+        public long[] achievementOwnedRewards = Array.Empty<long>();
+        public double[] achievementEarningsThresholds = Array.Empty<double>();
+        public long[] achievementEarningsRewards = Array.Empty<long>();
+        public int[] achievementWarpThresholds = Array.Empty<int>();
+        public long[] achievementWarpRewards = Array.Empty<long>();
+
         public GeneratorDef[] generators = Array.Empty<GeneratorDef>();
 
         public void Validate()
@@ -77,6 +133,19 @@ namespace StellarIdle.Core
                 throw new InvalidOperationException("GameBalance: no generators defined.");
             if (milestones == null) milestones = Array.Empty<int>();
             Array.Sort(milestones);
+            researchTiers ??= Array.Empty<ResearchTierDef>();
+            globalResearch ??= Array.Empty<GlobalResearchDef>();
+            darkMatterUpgrades ??= Array.Empty<DarkMatterUpgradeDef>();
+            achievementOwnedThresholds ??= Array.Empty<int>();
+            achievementOwnedRewards ??= Array.Empty<long>();
+            achievementEarningsThresholds ??= Array.Empty<double>();
+            achievementEarningsRewards ??= Array.Empty<long>();
+            achievementWarpThresholds ??= Array.Empty<int>();
+            achievementWarpRewards ??= Array.Empty<long>();
+            if (achievementOwnedRewards.Length < achievementOwnedThresholds.Length
+                || achievementEarningsRewards.Length < achievementEarningsThresholds.Length
+                || achievementWarpRewards.Length < achievementWarpThresholds.Length)
+                throw new InvalidOperationException("GameBalance: each achievement threshold needs a reward.");
             foreach (var g in generators)
             {
                 if (string.IsNullOrEmpty(g.id)) throw new InvalidOperationException("GameBalance: generator without id.");

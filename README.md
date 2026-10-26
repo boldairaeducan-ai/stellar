@@ -3,6 +3,20 @@
 Jeu mobile **idle / incrémental 2D** sur le thème de l'espace, fait avec Unity, pour Android (iOS pourra être ajouté plus tard).
 Le joueur tape sur une planète pour gagner des crédits, achète des bâtiments qui produisent automatiquement (drones, bases lunaires, sphères de Dyson…), continue de gagner hors ligne, puis fait un *prestige* (« Warp ») pour gagner de la Matière noire qui accélère les parties suivantes.
 
+## Boucle de jeu
+
+| Onglet | Rôle | Remis à zéro au Warp ? |
+|---|---|---|
+| **Build** | Acheter des bâtiments (x1 / x10 / MAX). Production x2 à 10, 25, 50, 100… exemplaires (barre de progression). | Oui |
+| **Research** | Achats uniques en crédits : x3 par bâtiment (à 10/25/50/100/200 exemplaires) et x2 global. Donne une décision toutes les quelques minutes en milieu de partie. | Oui |
+| **Warp** | Prestige : gain de Matière noire = √(crédits gagnés dans la galaxie / 1M). Chaque point **gagné** donne +2 % passif, et la Matière noire se **dépense** dans 7 améliorations permanentes (production, tap, coûts, crédits de départ, hors ligne, durée du boost, capsules). | Non |
+| **Goals** | Succès (bâtiments possédés, crédits gagnés, nombre de Warps) récompensés en cristaux. | Non |
+| **Shop** | Achats intégrés, Time Warp (cristaux), restauration, confidentialité. | — |
+
+Les onglets affichent une pastille quand une action est possible. Tous les chiffres sont dans `GameBalance.json`.
+
+**Visuels :** déposer des PNG dans `Assets/Resources/Art/` (voir le `README.txt` du dossier) remplace automatiquement les formes générées.
+
 ## Monétisation (non intrusive)
 
 | Source | Ce que reçoit le joueur | Pourquoi ce n'est pas intrusif |
@@ -34,7 +48,8 @@ Les pubs et les achats sont **simulés** (`MockAdsService`, `MockStoreService`) 
 Assets/
   Resources/GameBalance.json   ← TOUT l'équilibrage : coûts, production, durées, récompenses IAP
   Scripts/Core/                ← règles du jeu en C# pur, sans Unity, testées unitairement
-    IdleEconomy.cs             ← achat, production, paliers x2, hors ligne, boost, prestige, IAP
+    IdleEconomy*.cs            ← achat, production, paliers x2, hors ligne, boost, prestige, IAP,
+                                 recherche (.Research), arbre de Matière noire (.DarkMatter), succès (.Achievements)
     GameState.cs               ← données sauvegardées (tolère l'ajout ou le retrait de bâtiments)
     NumberFormat.cs            ← 1.23K, 4.56M, 7.89aa…
     ProductIds.cs              ← identifiants des produits Google Play et des emplacements de pub
@@ -43,9 +58,10 @@ Assets/
     SaveService.cs             ← sauvegarde JSON atomique avec backup
     Bootstrap.cs               ← lance le jeu dans n'importe quelle scène
     Services/                  ← IAdsService / IStoreService + mocks + ServiceFactory
-    UI/                        ← écran principal, popups, safe area (encoches), textes flottants
+    UI/                        ← MainScreen + un panneau par onglet (BuildingsPanel, ResearchPanel, WarpPanel,
+                                 GoalsPanel, ShopPanel), ListRow réutilisable, Art (emplacements d'images), effets
   Editor/ProjectSetup.cs       ← configuration Android en un clic
-  Tests/EditMode/              ← 19 tests (Window → General → Test Runner)
+  Tests/EditMode/              ← 27 tests (Window → General → Test Runner)
 ```
 
 **Points clés :**

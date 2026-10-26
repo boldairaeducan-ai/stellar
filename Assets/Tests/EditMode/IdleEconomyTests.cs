@@ -9,6 +9,18 @@ namespace StellarIdle.Tests
 
         static GameBalance Balance() => new GameBalance
         {
+            researchTiers = new[] { new ResearchTierDef { unlockOwned = 10, costFactor = 50 } },
+            globalResearch = new[] { new GlobalResearchDef { cost = 1000, multiplier = 2 } },
+            darkMatterUpgrades = new[]
+            {
+                new DarkMatterUpgradeDef { id = "engines", effect = DarkMatterEffect.Production, value = 0.25, baseCost = 1, costGrowth = 2 },
+                new DarkMatterUpgradeDef { id = "logistics", effect = DarkMatterEffect.Cost, value = 0.1, baseCost = 1, costGrowth = 1, maxLevel = 2 },
+                new DarkMatterUpgradeDef { id = "headstart", effect = DarkMatterEffect.StartCredits, value = 1000, baseCost = 1, costGrowth = 1 },
+            },
+            achievementOwnedThresholds = new[] { 25 },
+            achievementOwnedRewards = new long[] { 5 },
+            achievementWarpThresholds = new[] { 1 },
+            achievementWarpRewards = new long[] { 10 },
             generators = new[]
             {
                 new GeneratorDef { id = "a", name = "A", baseCost = 10, costGrowth = 1.15, baseProduction = 1 },
@@ -156,6 +168,116 @@ namespace StellarIdle.Tests
             Assert.AreEqual(0, eco.ClaimBonusDrop(Now + 100));
             Assert.IsTrue(eco.CanSpawnBonusDrop(Now + 3600));
             Assert.Greater(eco.ClaimBonusDrop(Now + 3600), 0);
+        }
+
+        [Test]
+        public void Research_MultipliesProduction_AndResetsOnPrestige()
+        {
+            var eco = NewEconomy(1e12);
+            eco.TryBuy(0, 10); // 10 x 1/s x milestone 2 = 20/s
+            var drone = FindResearch(eco, 0);
+            Assert.IsTrue(eco.IsResearchUnlocked(drone));
+            Assert.IsTrue(eco.TryResearch(drone));
+            Assert.IsFalse(eco.TryResearch(drone));
+            Assert.AreEqual(60, eco.ProductionPerSecond(Now), 1e-9);
+
+            var global = FindResearch(eco, -1);
+            Assert.IsTrue(eco.TryResearch(global));
+            Assert.AreEqual(120, eco.ProductionPerSecond(Now), 1e-9);
+
+            eco.Earn(1e8);
+            eco.Prestige();
+            Assert.IsFalse(eco.IsResearched(drone));
+            Assert.AreEqual(1, eco.ResearchMultiplier(0), 1e-9);
+        }
+
+        [Test]
+        public void Research_LockedUntilEnoughOwned()
+        {
+            var eco = NewEconomy(1e12);
+            eco.TryBuy(0, 9);
+            Assert.IsFalse(eco.CanResearch(FindResearch(eco, 0)));
+        }
+
+        [Test]
+        public void DarkMatter_SpendingKeepsPassiveBonus_AndUpgradesApply()
+        {
+            var eco = NewEconomy();
+            eco.Earn(16e6);
+            Assert.AreEqual(4, eco.Prestige());
+            Assert.AreEqual(1.08, eco.PrestigeMultiplier, 1e-9);
+
+            var engines = eco.DarkMatterUpgrades[0];
+            Assert.IsTrue(eco.TryBuyDarkMatterUpgrade(engines)); // costs 1
+            Assert.IsTrue(eco.TryBuyDarkMatterUpgrade(engines)); // costs 2
+            Assert.AreEqual(1, eco.State.darkMatter, 1e-9);
+            Assert.AreEqual(1.08, eco.PrestigeMultiplier, 1e-9);
+            Assert.AreEqual(1.5, eco.DarkMatterProductionMultiplier, 1e-9);
+
+            double before = eco.CostOf(0, 1);
+            Assert.IsTrue(eco.TryBuyDarkMatterUpgrade(eco.DarkMatterUpgrades[1]));
+            Assert.AreEqual(before * 0.9, eco.CostOf(0, 1), 1e-9);
+        }
+
+        [Test]
+        public void DarkMatter_MaxLevelAndStartingCredits()
+        {
+            var eco = NewEconomy();
+            eco.State.darkMatter = 10;
+            var logistics = eco.DarkMatterUpgrades[1];
+            Assert.IsTrue(eco.TryBuyDarkMatterUpgrade(logistics));
+            Assert.IsTrue(eco.TryBuyDarkMatterUpgrade(logistics));
+            Assert.IsFalse(eco.TryBuyDarkMatterUpgrade(logistics));
+
+            var headstart = eco.DarkMatterUpgrades[2];
+            eco.TryBuyDarkMatterUpgrade(headstart);
+            eco.TryBuyDarkMatterUpgrade(headstart);
+            Assert.AreEqual(10000, eco.StartingCredits, 1e-9);
+            eco.Earn(1e6);
+            eco.Prestige();
+            Assert.AreEqual(10000, eco.State.credits, 1e-9);
+        }
+
+        [Test]
+        public void Achievements_UseBestCount_AndPayOnce()
+        {
+            var eco = NewEconomy(1e12);
+            eco.TryBuy(0, 25);
+            eco.Earn(1e8);
+            eco.Prestige(); // count reset, best kept, warp_1 complete
+            var own = FindAchievement(eco, AchievementKind.Owned);
+            var warp = FindAchievement(eco, AchievementKind.Warps);
+            Assert.AreEqual(2, eco.ClaimableAchievementCount);
+            long crystals = eco.State.crystals;
+            Assert.IsTrue(eco.TryClaimAchievement(own));
+            Assert.IsFalse(eco.TryClaimAchievement(own));
+            Assert.IsTrue(eco.TryClaimAchievement(warp));
+            Assert.AreEqual(crystals + 15, eco.State.crystals);
+        }
+
+        [Test]
+        public void Migration_V1DarkMatterBecomesEarned()
+        {
+            var state = GameState.CreateNew(Now);
+            state.version = 1;
+            state.darkMatter = 7;
+            var eco = new IdleEconomy(Balance(), state);
+            Assert.AreEqual(7, eco.State.darkMatterEarned, 1e-9);
+            Assert.AreEqual(GameState.CurrentVersion, eco.State.version);
+        }
+
+        static ResearchItem FindResearch(IdleEconomy eco, int generator)
+        {
+            foreach (var r in eco.ResearchItems)
+                if (r.Generator == generator) return r;
+            return null;
+        }
+
+        static AchievementDef FindAchievement(IdleEconomy eco, AchievementKind kind)
+        {
+            foreach (var a in eco.Achievements)
+                if (a.Kind == kind && (kind != AchievementKind.Owned || a.Generator == 0)) return a;
+            return null;
         }
 
         [TestCase(0, "0")]

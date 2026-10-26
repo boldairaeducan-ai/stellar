@@ -59,6 +59,18 @@ namespace StellarIdle.UI
             label.rectTransform.sizeDelta = new Vector2(Size, Size);
             label.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.6f);
 
+            var custom = Art.CargoPod;
+            if (custom != null)
+            {
+                bodyImage.sprite = custom;
+                bodyImage.color = Color.white;
+                bodyImage.preserveAspect = true;
+                bodyImage.type = Image.Type.Simple;
+                body.sizeDelta = new Vector2(Size, Size);
+                inner.gameObject.SetActive(false);
+                label.gameObject.SetActive(false);
+            }
+
             graphics = pod.GetComponentsInChildren<Graphic>(true);
             baseAlphas = Array.ConvertAll(graphics, g => g.color.a);
             pod.gameObject.SetActive(false);
