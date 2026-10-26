@@ -57,7 +57,7 @@ namespace StellarIdle.UI
                     row.SetIcon(Art.Generator(def.id), Theme.GeneratorColor(item.Generator), Initial(def.name));
                     row.SetTexts(string.Format(Strings.ResearchName, def.name, tier),
                         unlocked
-                            ? string.Format(Strings.ResearchEffect, def.name, item.Multiplier)
+                            ? string.Format(Strings.ResearchEffect, def.name, eco.ResearchItemMultiplier(item).ToString("0.##"))
                             : string.Format(Strings.ResearchRequires, item.UnlockOwned, def.name));
                 }
                 row.SetHighlight(eco.CanResearch(item));
@@ -71,7 +71,7 @@ namespace StellarIdle.UI
             if (!Eco.TryResearch(item)) return;
             string effect = item.Generator < 0
                 ? string.Format(Strings.ResearchGlobalEffect, item.Multiplier)
-                : string.Format(Strings.ResearchEffect, Eco.Def(item.Generator).name, item.Multiplier);
+                : string.Format(Strings.ResearchEffect, Eco.Def(item.Generator).name, Eco.ResearchItemMultiplier(item).ToString("0.##"));
             Ctx.Toast(effect + "!");
             Ctx.Game.Save();
             Ctx.RequestRefresh();

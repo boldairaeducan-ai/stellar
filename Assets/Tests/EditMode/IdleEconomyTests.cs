@@ -11,11 +11,26 @@ namespace StellarIdle.Tests
         {
             researchTiers = new[] { new ResearchTierDef { unlockOwned = 10, costFactor = 50 } },
             globalResearch = new[] { new GlobalResearchDef { cost = 1000, multiplier = 2 } },
-            darkMatterUpgrades = new[]
+            skillTiers = new[]
             {
-                new DarkMatterUpgradeDef { id = "engines", effect = DarkMatterEffect.Production, value = 0.25, baseCost = 1, costGrowth = 2 },
-                new DarkMatterUpgradeDef { id = "logistics", effect = DarkMatterEffect.Cost, value = 0.1, baseCost = 1, costGrowth = 1, maxLevel = 2 },
-                new DarkMatterUpgradeDef { id = "headstart", effect = DarkMatterEffect.StartCredits, value = 1000, baseCost = 1, costGrowth = 1 },
+                new SkillTierDef
+                {
+                    unlockDarkMatter = 0, baseCost = 1, costGrowth = 2,
+                    nodes = new[]
+                    {
+                        new SkillNodeDef { id = "engines", effect = SkillEffect.Production, value = 0.25, maxLevel = 5 },
+                        new SkillNodeDef { id = "logistics", effect = SkillEffect.Cost, value = 0.1, maxLevel = 2 },
+                    }
+                },
+                new SkillTierDef
+                {
+                    unlockDarkMatter = 10, baseCost = 1, costGrowth = 1,
+                    nodes = new[]
+                    {
+                        new SkillNodeDef { id = "headstart", effect = SkillEffect.StartCredits, value = 1000, maxLevel = 5 },
+                        new SkillNodeDef { id = "harvest", effect = SkillEffect.DarkMatterGain, value = 0.5, maxLevel = 5 },
+                    }
+                },
             },
             achievementOwnedThresholds = new[] { 25 },
             achievementOwnedRewards = new long[] { 5 },
@@ -200,42 +215,89 @@ namespace StellarIdle.Tests
         }
 
         [Test]
-        public void DarkMatter_SpendingKeepsPassiveBonus_AndUpgradesApply()
+        public void SkillTree_SpendingKeepsPassiveBonus_AndNodesApply()
         {
             var eco = NewEconomy();
             eco.Earn(16e6);
             Assert.AreEqual(4, eco.Prestige());
             Assert.AreEqual(1.08, eco.PrestigeMultiplier, 1e-9);
 
-            var engines = eco.DarkMatterUpgrades[0];
-            Assert.IsTrue(eco.TryBuyDarkMatterUpgrade(engines)); // costs 1
-            Assert.IsTrue(eco.TryBuyDarkMatterUpgrade(engines)); // costs 2
+            var engines = eco.SkillTiers[0].nodes[0];
+            Assert.IsTrue(eco.TryBuySkill(0, engines)); // costs 1
+            Assert.IsTrue(eco.TryBuySkill(0, engines)); // costs 2
             Assert.AreEqual(1, eco.State.darkMatter, 1e-9);
             Assert.AreEqual(1.08, eco.PrestigeMultiplier, 1e-9);
-            Assert.AreEqual(1.5, eco.DarkMatterProductionMultiplier, 1e-9);
-
-            double before = eco.CostOf(0, 1);
-            Assert.IsTrue(eco.TryBuyDarkMatterUpgrade(eco.DarkMatterUpgrades[1]));
-            Assert.AreEqual(before * 0.9, eco.CostOf(0, 1), 1e-9);
+            Assert.AreEqual(1.5, eco.TreeProductionMultiplier, 1e-9);
         }
 
         [Test]
-        public void DarkMatter_MaxLevelAndStartingCredits()
+        public void SkillTree_OneChoicePerTier_TiersUnlockWithEarnedDarkMatter()
+        {
+            var eco = NewEconomy();
+            eco.State.darkMatter = 100;
+            eco.State.darkMatterEarned = 9;
+            var tier0 = eco.SkillTiers[0].nodes;
+            Assert.IsTrue(eco.TryBuySkill(0, tier0[1]));
+            Assert.IsTrue(eco.IsSkillBlocked(0, tier0[0]));
+            Assert.IsFalse(eco.TryBuySkill(0, tier0[0]));
+            Assert.IsTrue(eco.TryBuySkill(0, tier0[1]));
+            Assert.IsFalse(eco.TryBuySkill(0, tier0[1])); // max level 2
+            Assert.AreEqual(0.81, eco.BuildingCostMultiplier, 1e-9);
+
+            Assert.IsFalse(eco.IsTierUnlocked(1));
+            eco.State.darkMatterEarned = 10;
+            Assert.IsTrue(eco.TryBuySkill(1, eco.SkillTiers[1].nodes[0]));
+            Assert.IsTrue(eco.TryBuySkill(1, eco.SkillTiers[1].nodes[0]));
+            Assert.AreEqual(10000, eco.StartingCredits, 1e-9);
+        }
+
+        [Test]
+        public void SkillTree_RespecRefundsEverything_FirstOneFree()
         {
             var eco = NewEconomy();
             eco.State.darkMatter = 10;
-            var logistics = eco.DarkMatterUpgrades[1];
-            Assert.IsTrue(eco.TryBuyDarkMatterUpgrade(logistics));
-            Assert.IsTrue(eco.TryBuyDarkMatterUpgrade(logistics));
-            Assert.IsFalse(eco.TryBuyDarkMatterUpgrade(logistics));
+            eco.State.crystals = 60;
+            var engines = eco.SkillTiers[0].nodes[0];
+            eco.TryBuySkill(0, engines); // 1
+            eco.TryBuySkill(0, engines); // 2
+            eco.TryBuySkill(0, engines); // 4
+            Assert.AreEqual(3, eco.State.darkMatter, 1e-9);
+            Assert.AreEqual(7, eco.SkillTreeInvested, 1e-9);
 
-            var headstart = eco.DarkMatterUpgrades[2];
-            eco.TryBuyDarkMatterUpgrade(headstart);
-            eco.TryBuyDarkMatterUpgrade(headstart);
-            Assert.AreEqual(10000, eco.StartingCredits, 1e-9);
-            eco.Earn(1e6);
-            eco.Prestige();
-            Assert.AreEqual(10000, eco.State.credits, 1e-9);
+            Assert.AreEqual(0, eco.RespecCost);
+            Assert.IsTrue(eco.TryRespec());
+            Assert.AreEqual(10, eco.State.darkMatter, 1e-9);
+            Assert.AreEqual(60, eco.State.crystals);
+            Assert.AreEqual(1, eco.TreeProductionMultiplier, 1e-9);
+
+            eco.TryBuySkill(0, eco.SkillTiers[0].nodes[1]);
+            Assert.AreEqual(eco.Balance.respecCrystalCost, eco.RespecCost);
+            Assert.IsTrue(eco.TryRespec());
+            Assert.AreEqual(60 - eco.Balance.respecCrystalCost, eco.State.crystals);
+        }
+
+        [Test]
+        public void SkillTree_DarkMatterGain_AppliesToWarp()
+        {
+            var eco = NewEconomy();
+            eco.State.darkMatter = 10;
+            eco.State.darkMatterEarned = 10;
+            eco.TryBuySkill(1, eco.SkillTiers[1].nodes[1]); // +50% Dark Matter
+            eco.Earn(4e6); // sqrt(4) = 2 -> x1.5 = 3
+            Assert.AreEqual(3, eco.PendingDarkMatter, 1e-9);
+        }
+
+        [Test]
+        public void Migration_V2UpgradesAreRefunded()
+        {
+            var state = GameState.CreateNew(Now);
+            state.version = 2;
+            state.darkMatterEarned = 12;
+            state.darkMatter = 2;
+            state.darkMatterUpgrades.Add(new UpgradeLevel { id = "engines", level = 3 });
+            var eco = new IdleEconomy(Balance(), state);
+            Assert.AreEqual(12, eco.State.darkMatter, 1e-9);
+            Assert.AreEqual(0, eco.State.darkMatterUpgrades.Count);
         }
 
         [Test]

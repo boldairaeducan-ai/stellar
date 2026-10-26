@@ -24,7 +24,7 @@ namespace StellarIdle.Core
     [Serializable]
     public class GameState
     {
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
 
         public int version = CurrentVersion;
         public double credits;
@@ -42,7 +42,9 @@ namespace StellarIdle.Core
         public bool starterPackOwned;
         public List<OwnedGenerator> generators = new List<OwnedGenerator>();
         public List<string> research = new List<string>();                 // reset on prestige
-        public List<UpgradeLevel> darkMatterUpgrades = new List<UpgradeLevel>();
+        public List<UpgradeLevel> skillNodes = new List<UpgradeLevel>();
+        public bool freeRespecUsed;
+        public List<UpgradeLevel> darkMatterUpgrades = new List<UpgradeLevel>(); // v2 only, refunded on load
         public List<string> achievementsClaimed = new List<string>();
 
         public static GameState CreateNew(long nowUnix) => new GameState { lastSeenUnix = nowUnix };
@@ -82,9 +84,16 @@ namespace StellarIdle.Core
             if (generators == null) generators = new List<OwnedGenerator>();
             research ??= new List<string>();
             darkMatterUpgrades ??= new List<UpgradeLevel>();
+            skillNodes ??= new List<UpgradeLevel>();
             achievementsClaimed ??= new List<string>();
 
             if (version < 2) darkMatterEarned = Math.Max(darkMatterEarned, darkMatter); // v1 had no spending
+            if (version < 3 && darkMatterUpgrades.Count > 0)
+            {
+                // v2 linear upgrades were replaced by the skill tree: refund everything that was spent.
+                darkMatter = darkMatterEarned;
+                darkMatterUpgrades.Clear();
+            }
             version = CurrentVersion;
         }
 

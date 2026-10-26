@@ -183,7 +183,8 @@ namespace StellarIdle.UI
         {
             pod.gameObject.SetActive(false);
             var b = game.Economy.Balance;
-            timer = UnityEngine.Random.Range((float)b.bonusDropMinIntervalSeconds, (float)b.bonusDropMaxIntervalSeconds);
+            timer = UnityEngine.Random.Range((float)b.bonusDropMinIntervalSeconds, (float)b.bonusDropMaxIntervalSeconds)
+                    * (float)game.Economy.BonusDropIntervalMultiplier;
             SetPhase(Phase.Waiting);
         }
 

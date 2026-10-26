@@ -99,7 +99,7 @@ namespace StellarIdle.Core
             foreach (int t in Balance.milestones)
             {
                 if (owned < t) break;
-                m *= Balance.milestoneMultiplier;
+                m *= MilestoneMultiplierValue;
             }
             return m;
         }
@@ -127,12 +127,12 @@ namespace StellarIdle.Core
         // ---------- Production ----------
 
         /// <summary>Passive bonus from all Dark Matter ever earned (spending it in the tree costs nothing).</summary>
-        public double PrestigeMultiplier => 1 + State.darkMatterEarned * Balance.prestigeBonusPerPoint;
+        public double PrestigeMultiplier => 1 + State.darkMatterEarned * PrestigeBonusPerPoint;
 
         public double PermanentMultiplier =>
-            PrestigeMultiplier * DarkMatterProductionMultiplier * (State.vip ? Balance.vipMultiplier : 1);
+            PrestigeMultiplier * TreeProductionMultiplier * (State.vip ? Balance.vipMultiplier : 1);
 
-        public double GlobalMultiplier(long now) => PermanentMultiplier * (IsBoostActive(now) ? Balance.boostMultiplier : 1);
+        public double GlobalMultiplier(long now) => PermanentMultiplier * (IsBoostActive(now) ? BoostMultiplier : 1);
 
         /// <summary>Generator output before global multipliers: units x milestones x research.</summary>
         public double BaseGeneratorProduction(int i) =>
@@ -149,7 +149,8 @@ namespace StellarIdle.Core
         public double ProductionPerSecond(long now) => RawProduction() * GlobalMultiplier(now);
 
         public double TapValue(long now) =>
-            Balance.tapBaseValue * GlobalMultiplier(now) + ProductionPerSecond(now) * (Balance.tapProductionShare + DarkMatterTapShare);
+            (Balance.tapBaseValue * GlobalMultiplier(now) + ProductionPerSecond(now) * (Balance.tapProductionShare + TreeTapShare))
+            * TreeTapMultiplier;
 
         public double Tap(long now)
         {
@@ -174,7 +175,7 @@ namespace StellarIdle.Core
         // ---------- Offline ----------
 
         public double OfflineCapSeconds =>
-            ((State.vip ? Balance.vipOfflineMaxHours : Balance.offlineMaxHours) + DarkMatterOfflineHours) * 3600;
+            ((State.vip ? Balance.vipOfflineMaxHours : Balance.offlineMaxHours) + TreeOfflineHours) * 3600;
 
         public OfflineReport ComputeOffline(long now)
         {
@@ -184,9 +185,9 @@ namespace StellarIdle.Core
             if (elapsed < Balance.minOfflineSeconds) return OfflineReport.None;
 
             double counted = Math.Min(elapsed, OfflineCapSeconds);
-            double perSecond = RawProduction() * PermanentMultiplier * Balance.offlineEfficiency;
+            double perSecond = RawProduction() * PermanentMultiplier * OfflineEfficiency;
             double boostedSeconds = Math.Max(0, Math.Min(State.boostEndsAtUnix - since, counted));
-            double amount = perSecond * (counted + boostedSeconds * (Balance.boostMultiplier - 1));
+            double amount = perSecond * (counted + boostedSeconds * (BoostMultiplier - 1));
             return new OfflineReport(elapsed, amount, elapsed > OfflineCapSeconds);
         }
 
@@ -205,8 +206,8 @@ namespace StellarIdle.Core
         public bool IsBoostActive(long now) => State.boostEndsAtUnix > now;
         public double BoostRemaining(long now) => Math.Max(0, State.boostEndsAtUnix - now);
         /// <summary>Duration given by one ad boost (Dark Matter "boostHours" extends it).</summary>
-        public double BoostDurationSeconds => Balance.boostDurationSeconds + DarkMatterBoostHours * 3600;
-        public double BoostMaxSeconds => Balance.boostMaxSeconds + DarkMatterBoostHours * 3600 * 3;
+        public double BoostDurationSeconds => Balance.boostDurationSeconds + TreeBoostHours * 3600;
+        public double BoostMaxSeconds => Balance.boostMaxSeconds + TreeBoostHours * 3600 * 3;
         public bool CanAddBoost(long now) => BoostRemaining(now) < BoostMaxSeconds - 60;
 
         public void AddBoost(long now, double seconds)
@@ -223,11 +224,11 @@ namespace StellarIdle.Core
         /// <summary>Credits a bonus drop gives right now: a few minutes of production, never less than the floor.</summary>
         public double BonusDropReward =>
             Math.Max(Balance.bonusDropMinReward, RawProduction() * PermanentMultiplier * Balance.bonusDropProductionSeconds)
-            * DarkMatterBonusDropMultiplier;
+            * BonusDropMultiplier;
 
         /// <summary>False once the hourly cap is reached (counted per rolling one-hour window, persisted).</summary>
         public bool CanSpawnBonusDrop(long now) =>
-            now - State.bonusDropWindowStartUnix >= BonusDropWindowSeconds || State.bonusDropsInWindow < Balance.bonusDropMaxPerHour;
+            now - State.bonusDropWindowStartUnix >= BonusDropWindowSeconds || State.bonusDropsInWindow < BonusDropMaxPerHour;
 
         public double ClaimBonusDrop(long now)
         {
@@ -245,7 +246,8 @@ namespace StellarIdle.Core
 
         // ---------- Prestige ----------
 
-        public double PendingDarkMatter => Math.Floor(Math.Sqrt(State.runEarnings / Balance.prestigeDivisor));
+        public double PendingDarkMatter =>
+            Math.Floor(Math.Sqrt(State.runEarnings / Balance.prestigeDivisor) * DarkMatterGainMultiplier);
         public bool CanPrestige => PendingDarkMatter >= 1;
 
         /// <summary>Earnings needed this run to be able to prestige for the first point.</summary>
@@ -253,7 +255,7 @@ namespace StellarIdle.Core
 
         /// <summary>Production multiplier the player would have right after warping now.</summary>
         public double PrestigeMultiplierAfterWarp =>
-            1 + (State.darkMatterEarned + PendingDarkMatter) * Balance.prestigeBonusPerPoint;
+            1 + (State.darkMatterEarned + PendingDarkMatter) * PrestigeBonusPerPoint;
 
         public double Prestige()
         {

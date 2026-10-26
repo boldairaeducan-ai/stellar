@@ -9,7 +9,7 @@ Le joueur tape sur une planète pour gagner des crédits, achète des bâtiments
 |---|---|---|
 | **Build** | Acheter des bâtiments (x1 / x10 / MAX). Production x2 à 10, 25, 50, 100… exemplaires (barre de progression). | Oui |
 | **Research** | Achats uniques en crédits : x3 par bâtiment (à 10/25/50/100/200 exemplaires) et x2 global. Donne une décision toutes les quelques minutes en milieu de partie. | Oui |
-| **Warp** | Prestige : gain de Matière noire = √(crédits gagnés dans la galaxie / 1M). Chaque point **gagné** donne +2 % passif, et la Matière noire se **dépense** dans 7 améliorations permanentes (production, tap, coûts, crédits de départ, hors ligne, durée du boost, capsules). | Non |
+| **Warp** | Prestige : gain de Matière noire = √(crédits gagnés dans la galaxie / 1M). Chaque point **gagné** donne +2 % passif. La Matière noire se **dépense** dans un arbre de 6 paliers × 3 voies (Industrie / Commandement / Logistique) : un seul nœud par palier, paliers débloqués par la Matière noire gagnée au total (0 → 1200), effets de plus en plus forts. Réinitialisation : 1ʳᵉ gratuite, puis 50 cristaux. | Non |
 | **Goals** | Succès (bâtiments possédés, crédits gagnés, nombre de Warps) récompensés en cristaux. | Non |
 | **Shop** | Achats intégrés, Time Warp (cristaux), restauration, confidentialité. | — |
 
@@ -49,7 +49,7 @@ Assets/
   Resources/GameBalance.json   ← TOUT l'équilibrage : coûts, production, durées, récompenses IAP
   Scripts/Core/                ← règles du jeu en C# pur, sans Unity, testées unitairement
     IdleEconomy*.cs            ← achat, production, paliers x2, hors ligne, boost, prestige, IAP,
-                                 recherche (.Research), arbre de Matière noire (.DarkMatter), succès (.Achievements)
+                                 recherche (.Research), arbre de compétences (.SkillTree), succès (.Achievements)
     GameState.cs               ← données sauvegardées (tolère l'ajout ou le retrait de bâtiments)
     NumberFormat.cs            ← 1.23K, 4.56M, 7.89aa…
     ProductIds.cs              ← identifiants des produits Google Play et des emplacements de pub
@@ -59,9 +59,9 @@ Assets/
     Bootstrap.cs               ← lance le jeu dans n'importe quelle scène
     Services/                  ← IAdsService / IStoreService + mocks + ServiceFactory
     UI/                        ← MainScreen + un panneau par onglet (BuildingsPanel, ResearchPanel, WarpPanel,
-                                 GoalsPanel, ShopPanel), ListRow réutilisable, Art (emplacements d'images), effets
+                                 GoalsPanel, ShopPanel), SkillNodeCard, ListRow réutilisable, Art (emplacements d'images), effets
   Editor/ProjectSetup.cs       ← configuration Android en un clic
-  Tests/EditMode/              ← 27 tests (Window → General → Test Runner)
+  Tests/EditMode/              ← 30 tests (Window → General → Test Runner)
 ```
 
 **Points clés :**

@@ -18,7 +18,7 @@ namespace StellarIdle.Core
     {
         readonly List<ResearchItem> researchItems = new List<ResearchItem>();
         readonly HashSet<string> researched = new HashSet<string>();
-        double[] researchMultipliers = Array.Empty<double>();
+        int[] researchCounts = Array.Empty<int>();
         double globalResearchMultiplier = 1;
 
         public IReadOnlyList<ResearchItem> ResearchItems => researchItems;
@@ -64,14 +64,13 @@ namespace StellarIdle.Core
             researched.Clear();
             foreach (var id in State.research) researched.Add(id);
 
-            researchMultipliers = new double[GeneratorCount];
-            for (int g = 0; g < researchMultipliers.Length; g++) researchMultipliers[g] = 1;
+            researchCounts = new int[GeneratorCount];
             globalResearchMultiplier = 1;
             foreach (var item in researchItems)
             {
                 if (!researched.Contains(item.Id)) continue;
                 if (item.Generator < 0) globalResearchMultiplier *= item.Multiplier;
-                else researchMultipliers[item.Generator] *= item.Multiplier;
+                else researchCounts[item.Generator]++;
             }
         }
 
@@ -102,7 +101,10 @@ namespace StellarIdle.Core
             }
         }
 
-        public double ResearchMultiplier(int generator) => researchMultipliers[generator];
+        /// <summary>Multiplier given by one research item (generator research follows the skill tree).</summary>
+        public double ResearchItemMultiplier(ResearchItem item) => item.Generator < 0 ? item.Multiplier : ResearchMultiplierValue;
+
+        public double ResearchMultiplier(int generator) => Math.Pow(ResearchMultiplierValue, researchCounts[generator]);
         public double GlobalResearchMultiplier => globalResearchMultiplier;
     }
 }

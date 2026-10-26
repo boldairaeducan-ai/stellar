@@ -19,6 +19,13 @@ namespace StellarIdle.UI
         public static readonly Color PlanetDark = new Color32(40, 70, 160, 255);
         public static readonly Color PlanetLight = new Color32(120, 210, 255, 255);
 
+        public static readonly Color Industry = new Color32(255, 150, 60, 255);
+        public static readonly Color Command = new Color32(170, 110, 255, 255);
+        public static readonly Color Logistics = new Color32(60, 200, 190, 255);
+
+        public static Color Branch(string branch) =>
+            branch == Core.SkillBranch.Command ? Command : branch == Core.SkillBranch.Logistics ? Logistics : Industry;
+
         /// <summary>A distinct, pleasant color per generator index.</summary>
         public static Color GeneratorColor(int index) => Color.HSVToRGB(index * 0.13f % 1f, 0.55f, 0.95f);
     }

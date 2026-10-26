@@ -41,14 +41,56 @@
         { "cost": 100000000000000,   "multiplier": 2 },
         { "cost": 100000000000000000, "multiplier": 2 }
     ],
-    "darkMatterUpgrades": [
-        { "id": "engines",   "name": "Stellar Engines",   "effect": "production",   "value": 0.25, "baseCost": 1, "costGrowth": 1.6, "maxLevel": 0 },
-        { "id": "salvage",   "name": "Salvage Crews",     "effect": "bonusDrop",    "value": 0.25, "baseCost": 1, "costGrowth": 1.8, "maxLevel": 8 },
-        { "id": "fingers",   "name": "Quantum Fingers",   "effect": "tap",          "value": 0.02, "baseCost": 1, "costGrowth": 1.5, "maxLevel": 10 },
-        { "id": "logistics", "name": "Orbital Logistics", "effect": "cost",         "value": 0.05, "baseCost": 2, "costGrowth": 1.8, "maxLevel": 10 },
-        { "id": "headstart", "name": "Head Start",        "effect": "startCredits", "value": 1000, "baseCost": 2, "costGrowth": 2.2, "maxLevel": 6 },
-        { "id": "cryo",      "name": "Cryo Vaults",       "effect": "offlineHours", "value": 2,    "baseCost": 3, "costGrowth": 2,   "maxLevel": 4 },
-        { "id": "overdrive", "name": "Overdrive Reactor", "effect": "boostHours",   "value": 1,    "baseCost": 3, "costGrowth": 2,   "maxLevel": 4 }
+    "respecCrystalCost": 50,
+    "skillTiers": [
+        {
+            "name": "Ignition", "unlockDarkMatter": 0, "baseCost": 1, "costGrowth": 1.6,
+            "nodes": [
+                {"id": "engines", "name": "Stellar Engines", "branch": "industry", "effect": "production", "value": 0.3, "maxLevel": 5},
+                {"id": "fingers", "name": "Quantum Fingers", "branch": "command", "effect": "tap", "value": 0.03, "maxLevel": 5},
+                {"id": "cryo", "name": "Cryo Vaults", "branch": "logistics", "effect": "offlineHours", "value": 2, "maxLevel": 5}
+            ]
+        },
+        {
+            "name": "Expansion", "unlockDarkMatter": 8, "baseCost": 3, "costGrowth": 1.6,
+            "nodes": [
+                {"id": "logistics", "name": "Orbital Logistics", "branch": "industry", "effect": "cost", "value": 0.06, "maxLevel": 5},
+                {"id": "overdrive", "name": "Overdrive Reactor", "branch": "command", "effect": "boostHours", "value": 1, "maxLevel": 5},
+                {"id": "headstart", "name": "Head Start", "branch": "logistics", "effect": "startCredits", "value": 1000, "maxLevel": 5}
+            ]
+        },
+        {
+            "name": "Mastery", "unlockDarkMatter": 30, "baseCost": 10, "costGrowth": 1.6,
+            "nodes": [
+                {"id": "deepresearch", "name": "Deep Research", "branch": "industry", "effect": "research", "value": 0.1, "maxLevel": 5},
+                {"id": "salvage", "name": "Salvage Crews", "branch": "command", "effect": "bonusDrop", "value": 0.5, "maxLevel": 5},
+                {"id": "dilation", "name": "Time Dilation", "branch": "logistics", "effect": "offlineEfficiency", "value": 0.1, "maxLevel": 5}
+            ]
+        },
+        {
+            "name": "Dominion", "unlockDarkMatter": 100, "baseCost": 30, "costGrowth": 1.6,
+            "nodes": [
+                {"id": "megastructures", "name": "Megastructures", "branch": "industry", "effect": "productionMult", "value": 0.5, "maxLevel": 5},
+                {"id": "hyperdrive", "name": "Hyperdrive", "branch": "command", "effect": "boostMultiplier", "value": 0.1, "maxLevel": 5},
+                {"id": "darkharvest", "name": "Dark Harvest", "branch": "logistics", "effect": "darkMatterGain", "value": 0.2, "maxLevel": 5}
+            ]
+        },
+        {
+            "name": "Singularity", "unlockDarkMatter": 350, "baseCost": 100, "costGrowth": 1.6,
+            "nodes": [
+                {"id": "resonance", "name": "Resonance", "branch": "industry", "effect": "milestone", "value": 0.04, "maxLevel": 5},
+                {"id": "tractor", "name": "Tractor Beams", "branch": "command", "effect": "bonusDropRate", "value": 0.1, "maxLevel": 5},
+                {"id": "memory", "name": "Ancestral Memory", "branch": "logistics", "effect": "prestigeBonus", "value": 0.002, "maxLevel": 5}
+            ]
+        },
+        {
+            "name": "Transcendence", "unlockDarkMatter": 1200, "baseCost": 300, "costGrowth": 1.6,
+            "nodes": [
+                {"id": "galacticengine", "name": "Galactic Engine", "branch": "industry", "effect": "productionMult", "value": 1.0, "maxLevel": 5},
+                {"id": "supernova", "name": "Supernova Taps", "branch": "command", "effect": "tapMult", "value": 1.0, "maxLevel": 5},
+                {"id": "eternity", "name": "Eternal Harvest", "branch": "logistics", "effect": "darkMatterGain", "value": 0.5, "maxLevel": 5}
+            ]
+        }
     ],
     "achievementOwnedThresholds": [25, 100, 250],
     "achievementOwnedRewards": [2, 5, 10],

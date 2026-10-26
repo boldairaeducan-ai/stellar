@@ -32,28 +32,54 @@ namespace StellarIdle.Core
         public double multiplier = 2;
     }
 
-    /// <summary>Permanent upgrade bought with Dark Matter. See <see cref="DarkMatterEffect"/> for effect names.</summary>
+    /// <summary>One node of the Dark Matter skill tree. Only one node per tier can be chosen.</summary>
     [Serializable]
-    public class DarkMatterUpgradeDef
+    public class SkillNodeDef
     {
         public string id;
         public string name;
-        public string effect;
-        public double value;
-        public double baseCost = 1;
-        public double costGrowth = 1.5;
-        public int maxLevel; // 0 = unlimited
+        public string branch;   // see SkillBranch
+        public string effect;   // see SkillEffect
+        public double value;    // per level
+        public int maxLevel = 5;
     }
 
-    public static class DarkMatterEffect
+    /// <summary>A tier of the tree: unlocked by Dark Matter earned (lifetime), nodes get stronger with each tier.</summary>
+    [Serializable]
+    public class SkillTierDef
     {
-        public const string Production = "production";      // +value x level production
-        public const string Tap = "tap";                    // +value x level share of production per tap
-        public const string Cost = "cost";                  // buildings cost (1 - value)^level
-        public const string StartCredits = "startCredits";  // start each galaxy with value x 10^(level-1) credits
-        public const string OfflineHours = "offlineHours";  // +value x level hours of offline cap
-        public const string BoostHours = "boostHours";      // +value x level hours per ad boost (and max)
-        public const string BonusDrop = "bonusDrop";        // +value x level cargo pod reward
+        public string name;
+        public double unlockDarkMatter;
+        public double baseCost = 1;
+        public double costGrowth = 1.6;
+        public SkillNodeDef[] nodes = Array.Empty<SkillNodeDef>();
+    }
+
+    public static class SkillBranch
+    {
+        public const string Industry = "industry";
+        public const string Command = "command";
+        public const string Logistics = "logistics";
+    }
+
+    public static class SkillEffect
+    {
+        public const string Production = "production";               // +value x level production (additive)
+        public const string ProductionMult = "productionMult";       // x(1 + value) per level (multiplicative)
+        public const string Tap = "tap";                             // +value x level share of production per tap
+        public const string TapMult = "tapMult";                     // tap value +value x level
+        public const string Cost = "cost";                           // buildings cost x(1 - value) per level
+        public const string StartCredits = "startCredits";           // value x 10^(level-1) credits after each warp
+        public const string OfflineHours = "offlineHours";           // +value x level hours of offline cap
+        public const string OfflineEfficiency = "offlineEfficiency"; // +value x level offline efficiency (max 100%)
+        public const string BoostHours = "boostHours";               // +value x level hours per ad boost
+        public const string BoostMultiplier = "boostMultiplier";     // ad boost multiplier +value x level
+        public const string BonusDrop = "bonusDrop";                 // cargo pod reward +value x level
+        public const string BonusDropRate = "bonusDropRate";         // pods value x level more often, +1/hour cap per level
+        public const string Research = "research";                   // research multiplier +value x level
+        public const string Milestone = "milestone";                 // milestone multiplier +value x level
+        public const string DarkMatterGain = "darkMatterGain";       // Dark Matter from warps +value x level
+        public const string PrestigeBonus = "prestigeBonus";         // passive bonus per Dark Matter +value x level
     }
 
     /// <summary>
@@ -114,8 +140,9 @@ namespace StellarIdle.Core
         public ResearchTierDef[] researchTiers = Array.Empty<ResearchTierDef>();
         public GlobalResearchDef[] globalResearch = Array.Empty<GlobalResearchDef>();
 
-        // Dark Matter tree (permanent)
-        public DarkMatterUpgradeDef[] darkMatterUpgrades = Array.Empty<DarkMatterUpgradeDef>();
+        // Dark Matter skill tree (permanent)
+        public SkillTierDef[] skillTiers = Array.Empty<SkillTierDef>();
+        public long respecCrystalCost = 50;
 
         // Achievements (crystal rewards)
         public int[] achievementOwnedThresholds = Array.Empty<int>();
@@ -135,7 +162,8 @@ namespace StellarIdle.Core
             Array.Sort(milestones);
             researchTiers ??= Array.Empty<ResearchTierDef>();
             globalResearch ??= Array.Empty<GlobalResearchDef>();
-            darkMatterUpgrades ??= Array.Empty<DarkMatterUpgradeDef>();
+            skillTiers ??= Array.Empty<SkillTierDef>();
+            foreach (var tier in skillTiers) tier.nodes ??= Array.Empty<SkillNodeDef>();
             achievementOwnedThresholds ??= Array.Empty<int>();
             achievementOwnedRewards ??= Array.Empty<long>();
             achievementEarningsThresholds ??= Array.Empty<double>();
