@@ -10,6 +10,7 @@ or "Default". Use transparent backgrounds for everything except the background.
   cargo_pod.png                Bonus drop pod, square (256x256)
   Icons/crystal.png            Premium currency icon (128x128)
   Icons/dark_matter.png        Dark Matter icon, used in the Warp tab (128x128)
+  Ships/rusty_miner.png        One image per ship id (see "ships" in GameBalance.json), square 256x256
   Generators/drone.png         One icon per generator id (see GameBalance.json), square 256x256:
   Generators/harvester.png       drone, harvester, lunar, station, mars,
   Generators/lunar.png           refinery, dyson, wormhole, forge, core
