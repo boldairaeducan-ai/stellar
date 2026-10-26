@@ -62,6 +62,14 @@ namespace StellarIdle.UI
         public const string On = "ON";
         public const string Off = "OFF";
 
+        public const string DropTitle = "Cargo pod!";
+        public const string DropBody = "A supply pod drifted by your planet.\nWatch a short video to collect {0} credits.";
+        public const string DropBodyVip = "A supply pod drifted by your planet.\nCollect {0} credits.";
+        public const string DropWatch = "Watch ad";
+        public const string DropCollectVip = "Collect (VIP)";
+        public const string DropSkip = "No thanks";
+        public const string DropCollected = "+{0} credits!";
+
         public const string AdUnavailable = "No ad available right now, try again later.";
         public const string Close = "Close";
         public const string Cancel = "Cancel";

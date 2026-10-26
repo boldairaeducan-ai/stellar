@@ -9,6 +9,7 @@ Le joueur tape sur une planète pour gagner des crédits, achète des bâtiments
 |---|---|---|
 | **Pub récompensée « Boost x2 »** | Production x2 pendant 4 h (cumulable jusqu'à 12 h) | C'est le joueur qui choisit de la regarder |
 | **Pub récompensée « Gains hors ligne x2 »** | Double les gains accumulés pendant l'absence | Proposée seulement au retour dans le jeu, à côté d'un bouton « Collect » gratuit |
+| **Pub récompensée « Capsule cargo »** | 5 min de production (min. 50 crédits) | Une capsule traverse le décor toutes les 4 à 8 min et reste 25 s ; on peut l'ignorer ; 6 par heure au maximum |
 | **IAP VIP Pass** (non-consommable) | x2 permanent, toutes les récompenses sans regarder de pub, 12 h hors ligne au lieu de 4 h | C'est l'achat « Supprimer les pubs » des idle games |
 | **IAP Starter Pack** (achat unique) | 300 cristaux + boost x2 de 8 h | Offre unique, à petit prix |
 | **IAP Cristaux** (consommables) | Monnaie premium utilisée pour le **Time Warp** (4 h de production immédiate) | Ne bloque jamais la progression |
@@ -56,8 +57,8 @@ Assets/
 ## Prochaines étapes
 
 1. **Ouvrir le projet et jouer** pour ajuster l'équilibrage dans `GameBalance.json`.
-2. **Pubs** : intégrer **LevelPlay (Unity Ads Mediation)** via `LevelPlayAdsService : IAdsService`, en rewarded uniquement.
-3. **Consentement RGPD** : obligatoire en Europe pour les pubs. Utiliser le module de consentement de LevelPlay ou Google UMP.
+2. ~~Pubs LevelPlay~~ : fait (`Assets/Scripts/Ads/`), pubs récompensées uniquement, ad unit `p15gaz3j25581h18`.
+3. ~~Consentement RGPD / CCPA~~ : fait (popup au premier lancement, Boutique → Privacy). **Remplacer `PrivacyConsent.PrivacyPolicyUrl`** par ta vraie politique de confidentialité.
 4. **Achats** : intégrer **Unity IAP** via `UnityIapStoreService : IStoreService`, et créer les produits `vip_pass`, `starter_pack`, `crystals_small` et `crystals_large` dans la Google Play Console.
 5. **Visuels et sons** : remplacer les sprites générés (`ProceduralSprites.cs`) par de vrais assets.
 6. **Analytics** : Unity Analytics ou Firebase, pour suivre la rétention J1/J7 et le taux de visionnage des pubs.

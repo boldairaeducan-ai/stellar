@@ -27,6 +27,8 @@ namespace StellarIdle.Core
         public int prestigeCount;
         public long lastSeenUnix;
         public long boostEndsAtUnix;
+        public long bonusDropWindowStartUnix;
+        public int bonusDropsInWindow;
         public bool vip;
         public bool starterPackOwned;
         public List<OwnedGenerator> generators = new List<OwnedGenerator>();
@@ -59,6 +61,7 @@ namespace StellarIdle.Core
             darkMatter = Math.Floor(Clean(darkMatter));
             if (crystals < 0) crystals = 0;
             if (prestigeCount < 0) prestigeCount = 0;
+            if (bonusDropsInWindow < 0) bonusDropsInWindow = 0;
             if (generators == null) generators = new List<OwnedGenerator>();
         }
 

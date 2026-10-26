@@ -187,6 +187,32 @@ namespace StellarIdle.Core
             State.boostEndsAtUnix = Math.Min(end, now + (long)Balance.boostMaxSeconds);
         }
 
+        // ---------- Bonus drops (rewarded ad) ----------
+
+        const long BonusDropWindowSeconds = 3600;
+
+        /// <summary>Credits a bonus drop gives right now: a few minutes of production, never less than the floor.</summary>
+        public double BonusDropReward =>
+            Math.Max(Balance.bonusDropMinReward, RawProduction() * PermanentMultiplier * Balance.bonusDropProductionSeconds);
+
+        /// <summary>False once the hourly cap is reached (counted per rolling one-hour window, persisted).</summary>
+        public bool CanSpawnBonusDrop(long now) =>
+            now - State.bonusDropWindowStartUnix >= BonusDropWindowSeconds || State.bonusDropsInWindow < Balance.bonusDropMaxPerHour;
+
+        public double ClaimBonusDrop(long now)
+        {
+            if (!CanSpawnBonusDrop(now)) return 0;
+            if (now - State.bonusDropWindowStartUnix >= BonusDropWindowSeconds || now < State.bonusDropWindowStartUnix)
+            {
+                State.bonusDropWindowStartUnix = now;
+                State.bonusDropsInWindow = 0;
+            }
+            State.bonusDropsInWindow++;
+            double reward = BonusDropReward;
+            Earn(reward);
+            return reward;
+        }
+
         // ---------- Prestige ----------
 
         public double PendingDarkMatter => Math.Floor(Math.Sqrt(State.runEarnings / Balance.prestigeDivisor));

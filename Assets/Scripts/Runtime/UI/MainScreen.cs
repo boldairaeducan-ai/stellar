@@ -107,6 +107,9 @@ namespace StellarIdle.UI
             BuildGeneratorList(safe);
             BuildBottomBar(safe);
 
+            var dropLayer = UIFactory.Rect("BonusDrops", safe).Stretch();
+            BonusDropSpawner.Create(dropLayer, game, OnBonusDropTapped);
+
             floatLayer = UIFactory.Rect("FloatingTexts", safe).Stretch();
             floats = floatLayer.gameObject.AddComponent<FloatingTextPool>();
 
@@ -377,6 +380,22 @@ namespace StellarIdle.UI
         {
             Toast(Strings.PurchaseThanks);
             Refresh();
+        }
+
+        void OnBonusDropTapped()
+        {
+            string amount = NumberFormat.Format(Eco.BonusDropReward);
+            bool vip = game.SkipsAds;
+            Popup.Show(popupRoot, Strings.DropTitle, string.Format(vip ? Strings.DropBodyVip : Strings.DropBody, amount),
+                new Popup.Choice(vip ? Strings.DropCollectVip : Strings.DropWatch, Theme.Ad, () =>
+                    game.RequestReward(AdPlacements.BonusDrop, () =>
+                    {
+                        double gained = Eco.ClaimBonusDrop(Clock.Now);
+                        game.Save();
+                        Toast(string.Format(Strings.DropCollected, NumberFormat.Format(gained)));
+                        Refresh();
+                    }, () => Toast(Strings.AdUnavailable))),
+                new Popup.Choice(Strings.DropSkip, Theme.Disabled));
         }
 
         void ShowConsent()

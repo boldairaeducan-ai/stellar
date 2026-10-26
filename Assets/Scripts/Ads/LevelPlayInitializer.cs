@@ -38,6 +38,9 @@ public class LevelPlayInitializer : MonoBehaviour
         Instance = this;
         // Persist across scene loads so ads stay initialized
         DontDestroyOnLoad(gameObject);
+
+        // The rewarded ad manager lives on the same persistent object.
+        if (GetComponent<LevelPlayRewardedAdManager>() == null) gameObject.AddComponent<LevelPlayRewardedAdManager>();
     }
 
     void Start()

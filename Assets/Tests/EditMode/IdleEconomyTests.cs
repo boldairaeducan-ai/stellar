@@ -130,6 +130,34 @@ namespace StellarIdle.Tests
             Assert.AreEqual(2, state.generators.Count);
         }
 
+        [Test]
+        public void BonusDrop_GivesProductionMinutes_WithFloor_AndIgnoresBoost()
+        {
+            var eco = NewEconomy();
+            Assert.AreEqual(eco.Balance.bonusDropMinReward, eco.BonusDropReward, 1e-9);
+
+            eco.Earn(1e9);
+            eco.TryBuy(1, 1); // 10/s
+            eco.AddBoost(Now, 3600);
+            Assert.AreEqual(10 * eco.Balance.bonusDropProductionSeconds, eco.BonusDropReward, 1e-6);
+
+            double before = eco.State.credits;
+            double reward = eco.ClaimBonusDrop(Now);
+            Assert.AreEqual(reward, eco.State.credits - before, 1e-6);
+        }
+
+        [Test]
+        public void BonusDrop_IsCappedPerHour()
+        {
+            var eco = NewEconomy();
+            for (int k = 0; k < eco.Balance.bonusDropMaxPerHour; k++)
+                Assert.Greater(eco.ClaimBonusDrop(Now + k), 0);
+            Assert.IsFalse(eco.CanSpawnBonusDrop(Now + 100));
+            Assert.AreEqual(0, eco.ClaimBonusDrop(Now + 100));
+            Assert.IsTrue(eco.CanSpawnBonusDrop(Now + 3600));
+            Assert.Greater(eco.ClaimBonusDrop(Now + 3600), 0);
+        }
+
         [TestCase(0, "0")]
         [TestCase(5.55, "5.5")]
         [TestCase(999, "999")]

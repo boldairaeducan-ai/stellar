@@ -21,5 +21,6 @@ namespace StellarIdle.Core
     {
         public const string OfflineDouble = "offline_double";
         public const string Boost = "boost";
+        public const string BonusDrop = "bonus_drop";
     }
 }

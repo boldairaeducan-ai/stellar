@@ -46,6 +46,16 @@ namespace StellarIdle.Core
         public double boostDurationSeconds = 4 * 3600;
         public double boostMaxSeconds = 12 * 3600;
 
+        // Bonus drops: cargo pods that appear on screen, opened with a rewarded ad.
+        // Reward = N seconds of production (without the x2 boost), with a floor for the very start.
+        public double bonusDropProductionSeconds = 300;
+        public double bonusDropMinReward = 50;
+        public double bonusDropFirstDelaySeconds = 120;
+        public double bonusDropMinIntervalSeconds = 240;
+        public double bonusDropMaxIntervalSeconds = 480;
+        public double bonusDropLifetimeSeconds = 25;
+        public int bonusDropMaxPerHour = 6;
+
         // VIP pass (non-consumable IAP)
         public double vipMultiplier = 2;
 
