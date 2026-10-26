@@ -50,6 +50,18 @@ namespace StellarIdle.UI
         public const string OfflineDouble = "x2 (ad)";
         public const string OfflineDoubleVip = "x2 (VIP)";
 
+        public const string ConsentTitle = "Your privacy";
+        public const string ConsentBody = "Stellar Idle is free thanks to optional video ads.\nCan our ad partners use data from your device to show you more relevant ads?\nYou can change this anytime in Shop > Privacy.";
+        public const string ConsentAccept = "Accept";
+        public const string ConsentDecline = "Decline (non-personalized ads)";
+        public const string PrivacyButton = "Privacy";
+        public const string PrivacyTitle = "Privacy settings";
+        public const string PrivacyPersonalized = "Personalized ads: {0}";
+        public const string PrivacyDoNotSell = "Do not sell my personal info: {0}";
+        public const string PrivacyPolicy = "Privacy policy";
+        public const string On = "ON";
+        public const string Off = "OFF";
+
         public const string AdUnavailable = "No ad available right now, try again later.";
         public const string Close = "Close";
         public const string Cancel = "Cancel";

@@ -48,6 +48,7 @@ namespace StellarIdle.UI
             game.OfflineEarningsAvailable += ShowOffline;
             game.ProductDelivered += OnProductDelivered;
             if (game.PendingOffline.HasEarnings) ShowOffline(game.PendingOffline);
+            if (!PrivacyConsent.HasGdprAnswer) ShowConsent(); // shown last so it sits on top
             Refresh();
         }
 
@@ -348,6 +349,7 @@ namespace StellarIdle.UI
                 string.Format(Strings.TimeWarp, NumberFormat.Format(eco.TimeWarpValue), balance.timeWarpCrystalCost),
                 Theme.Prestige, DoTimeWarp, eco.TimeWarpValue > 0));
             choices.Add(new Popup.Choice(Strings.Restore, Theme.Disabled, game.Store.RestorePurchases));
+            choices.Add(new Popup.Choice(Strings.PrivacyButton, Theme.Disabled, OpenPrivacy));
             choices.Add(new Popup.Choice(Strings.Close, Theme.Disabled));
 
             Popup.Show(popupRoot, Strings.ShopTitle, $"{Strings.Crystals}: {eco.State.crystals}", choices.ToArray());
@@ -375,6 +377,37 @@ namespace StellarIdle.UI
         {
             Toast(Strings.PurchaseThanks);
             Refresh();
+        }
+
+        void ShowConsent()
+        {
+            Popup.Show(popupRoot, Strings.ConsentTitle, Strings.ConsentBody,
+                new Popup.Choice(Strings.ConsentAccept, Theme.Buy, () => PrivacyConsent.SetGdprConsent(true)),
+                new Popup.Choice(Strings.ConsentDecline, Theme.Disabled, () => PrivacyConsent.SetGdprConsent(false)),
+                new Popup.Choice(Strings.PrivacyPolicy, Theme.PanelLight, () =>
+                {
+                    Application.OpenURL(PrivacyConsent.PrivacyPolicyUrl);
+                    ShowConsent(); // the question still needs an answer
+                }));
+        }
+
+        void OpenPrivacy()
+        {
+            string personalized = PrivacyConsent.GdprConsent ? Strings.On : Strings.Off;
+            string doNotSell = PrivacyConsent.CcpaOptOut ? Strings.On : Strings.Off;
+            Popup.Show(popupRoot, Strings.PrivacyTitle, null,
+                new Popup.Choice(string.Format(Strings.PrivacyPersonalized, personalized), Theme.PanelLight, () =>
+                {
+                    PrivacyConsent.SetGdprConsent(!PrivacyConsent.GdprConsent);
+                    OpenPrivacy();
+                }),
+                new Popup.Choice(string.Format(Strings.PrivacyDoNotSell, doNotSell), Theme.PanelLight, () =>
+                {
+                    PrivacyConsent.SetCcpaOptOut(!PrivacyConsent.CcpaOptOut);
+                    OpenPrivacy();
+                }),
+                new Popup.Choice(Strings.PrivacyPolicy, Theme.PanelLight, () => Application.OpenURL(PrivacyConsent.PrivacyPolicyUrl)),
+                new Popup.Choice(Strings.Close, Theme.Disabled));
         }
 
         void ShowOffline(OfflineReport report)
