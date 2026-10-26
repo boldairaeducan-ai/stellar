@@ -32,6 +32,20 @@ namespace StellarIdle.Tests
                     }
                 },
             },
+            shipRarities = new[]
+            {
+                new ShipRarityDef { id = "common", weight = 1, unlockShards = 10, starCosts = new[] { 10, 20, 40, 80 } },
+            },
+            ships = new[]
+            {
+                new ShipDef { id = "miner_b", rarity = "common", role = ShipRole.Miner, generator = "b", value = 0.5 },
+                new ShipDef { id = "cruiser", rarity = "common", role = ShipRole.Cruiser, value = 0.25 },
+            },
+            expeditions = new[]
+            {
+                new ExpeditionDef { id = "sweep", minutes = 30, rolls = 1, crystals = 2, productionMinutes = 10 },
+            },
+            starterShip = "miner_b",
             achievementOwnedThresholds = new[] { 25 },
             achievementOwnedRewards = new long[] { 5 },
             achievementWarpThresholds = new[] { 1 },
@@ -161,6 +175,7 @@ namespace StellarIdle.Tests
         public void BonusDrop_GivesProductionMinutes_WithFloor_AndIgnoresBoost()
         {
             var eco = NewEconomy();
+            eco.TryUnequip(eco.FindShip("miner_b")); // keep the starter ship out of this test
             Assert.AreEqual(eco.Balance.bonusDropMinReward, eco.BonusDropReward, 1e-9);
 
             eco.Earn(1e9);
@@ -326,6 +341,96 @@ namespace StellarIdle.Tests
             var eco = new IdleEconomy(Balance(), state);
             Assert.AreEqual(7, eco.State.darkMatterEarned, 1e-9);
             Assert.AreEqual(GameState.CurrentVersion, eco.State.version);
+        }
+
+        [Test]
+        public void Fleet_StarterShipIsGivenAndBoostsItsBuilding()
+        {
+            var eco = NewEconomy(1e12);
+            var miner = eco.FindShip("miner_b");
+            Assert.AreEqual(1, eco.Stars(miner));
+            Assert.IsTrue(eco.IsEquipped(miner));
+            eco.TryBuy(1, 1); // 10/s
+            Assert.AreEqual(15, eco.ProductionPerSecond(Now), 1e-9);
+
+            eco.TryUnequip(miner);
+            Assert.AreEqual(10, eco.ProductionPerSecond(Now), 1e-9);
+        }
+
+        [Test]
+        public void Fleet_ShardsBuildAndStarUpShips()
+        {
+            var eco = NewEconomy();
+            eco.Rng = new System.Random(1);
+            var cruiser = eco.FindShip("cruiser");
+            Assert.IsFalse(eco.IsShipBuilt(cruiser));
+
+            eco.State.ships.Add(new ShipSave { id = "cruiser", shards = 25 });
+            Assert.IsTrue(eco.TryUpgradeShip(cruiser)); // build: 10
+            Assert.IsTrue(eco.TryUpgradeShip(cruiser)); // 2 stars: 10
+            Assert.IsFalse(eco.TryUpgradeShip(cruiser)); // needs 20, has 5
+            Assert.AreEqual(2, eco.Stars(cruiser));
+            Assert.AreEqual(0.375, eco.ShipBonus(cruiser), 1e-9);
+
+            Assert.IsTrue(eco.TryEquip(cruiser));
+            Assert.AreEqual(1.375, eco.FleetTapMultiplier, 1e-9);
+
+            var gains = eco.RollShards(4);
+            Assert.AreEqual(4, gains.Count);
+            int total = 0;
+            foreach (var ship in eco.Ships) total += eco.Shards(ship);
+            Assert.AreEqual(5 + 4 * eco.Balance.shardsPerRoll, total);
+        }
+
+        [Test]
+        public void Fleet_SlotsUnlockWithWarps()
+        {
+            var eco = NewEconomy();
+            Assert.AreEqual(3, eco.FleetSlots);
+            eco.State.prestigeCount = 1;
+            Assert.AreEqual(4, eco.FleetSlots);
+            Assert.AreEqual(5, eco.NextFleetSlotWarps);
+        }
+
+        [Test]
+        public void Expedition_LaunchSpeedUpAndCollect()
+        {
+            var eco = NewEconomy(1e12);
+            eco.Rng = new System.Random(3);
+            eco.TryBuy(0, 1); // 1/s, not boosted by the miner (it boosts building b)
+            var miner = eco.FindShip("miner_b");
+            var sweep = eco.Expeditions[0];
+
+            Assert.IsFalse(eco.TryLaunchExpedition(sweep, miner, Now)); // equipped ships stay home
+            eco.TryUnequip(miner);
+            Assert.IsTrue(eco.TryLaunchExpedition(sweep, miner, Now));
+            Assert.IsTrue(eco.IsOnExpedition(miner));
+            Assert.IsFalse(eco.CanEquip(miner));
+
+            var e = eco.ActiveExpeditions[0];
+            Assert.IsNull(eco.CollectExpedition(e, Now + 60));
+            Assert.IsTrue(eco.SpeedUpExpedition(e, Now + 600)); // 1200s left -> 600s
+            Assert.IsFalse(eco.SpeedUpExpedition(e, Now + 600));
+            Assert.AreEqual(Now + 1200, e.endUnix);
+
+            long crystals = eco.State.crystals;
+            double credits = eco.State.credits;
+            var result = eco.CollectExpedition(e, Now + 1200);
+            Assert.IsNotNull(result);
+            Assert.AreEqual(crystals + 2, eco.State.crystals);
+            Assert.AreEqual(10 * 60 * 1, result.Credits, 1e-6); // 10 min of 1/s, ship at 1 star
+            Assert.AreEqual(credits + result.Credits, eco.State.credits, 1e-3);
+            Assert.AreEqual(1, result.Shards.Count);
+            Assert.IsTrue(eco.IsShipIdle(miner));
+        }
+
+        [Test]
+        public void Fleet_WarpOpensAShardChest()
+        {
+            var eco = NewEconomy();
+            eco.Earn(1e6);
+            eco.Prestige();
+            Assert.AreEqual(eco.Balance.warpChestRolls, eco.LastWarpChest.Count);
         }
 
         static ResearchItem FindResearch(IdleEconomy eco, int generator)

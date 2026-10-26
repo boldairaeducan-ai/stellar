@@ -12,6 +12,24 @@ namespace StellarIdle.Core
     }
 
     [Serializable]
+    public class ShipSave
+    {
+        public string id;
+        public int shards;
+        public int stars; // 0 = not built yet
+    }
+
+    [Serializable]
+    public class ExpeditionSave
+    {
+        public string expeditionId;
+        public string shipId;
+        public long startUnix;
+        public long endUnix;
+        public bool adUsed;
+    }
+
+    [Serializable]
     public class UpgradeLevel
     {
         public string id;
@@ -24,7 +42,7 @@ namespace StellarIdle.Core
     [Serializable]
     public class GameState
     {
-        public const int CurrentVersion = 3;
+        public const int CurrentVersion = 4;
 
         public int version = CurrentVersion;
         public double credits;
@@ -46,6 +64,10 @@ namespace StellarIdle.Core
         public bool freeRespecUsed;
         public List<UpgradeLevel> darkMatterUpgrades = new List<UpgradeLevel>(); // v2 only, refunded on load
         public List<string> achievementsClaimed = new List<string>();
+        public List<ShipSave> ships = new List<ShipSave>();
+        public List<string> fleet = new List<string>();                 // equipped ship ids
+        public List<ExpeditionSave> expeditions = new List<ExpeditionSave>();
+        public bool starterShipGiven;
 
         public static GameState CreateNew(long nowUnix) => new GameState { lastSeenUnix = nowUnix };
 
@@ -85,6 +107,9 @@ namespace StellarIdle.Core
             research ??= new List<string>();
             darkMatterUpgrades ??= new List<UpgradeLevel>();
             skillNodes ??= new List<UpgradeLevel>();
+            ships ??= new List<ShipSave>();
+            fleet ??= new List<string>();
+            expeditions ??= new List<ExpeditionSave>();
             achievementsClaimed ??= new List<string>();
 
             if (version < 2) darkMatterEarned = Math.Max(darkMatterEarned, darkMatter); // v1 had no spending

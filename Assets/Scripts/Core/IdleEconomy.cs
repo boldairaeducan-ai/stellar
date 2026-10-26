@@ -42,6 +42,7 @@ namespace StellarIdle.Core
             State.EnsureGenerators(Balance.generators);
             BuildResearch();
             BuildAchievements();
+            InitFleet();
         }
 
         // ---------- Generators ----------
@@ -130,13 +131,13 @@ namespace StellarIdle.Core
         public double PrestigeMultiplier => 1 + State.darkMatterEarned * PrestigeBonusPerPoint;
 
         public double PermanentMultiplier =>
-            PrestigeMultiplier * TreeProductionMultiplier * (State.vip ? Balance.vipMultiplier : 1);
+            PrestigeMultiplier * TreeProductionMultiplier * FleetGlobalMultiplier * (State.vip ? Balance.vipMultiplier : 1);
 
         public double GlobalMultiplier(long now) => PermanentMultiplier * (IsBoostActive(now) ? BoostMultiplier : 1);
 
         /// <summary>Generator output before global multipliers: units x milestones x research.</summary>
         public double BaseGeneratorProduction(int i) =>
-            Def(i).baseProduction * Owned(i) * MilestoneMultiplier(Owned(i)) * ResearchMultiplier(i) * GlobalResearchMultiplier;
+            Def(i).baseProduction * Owned(i) * MilestoneMultiplier(Owned(i)) * ResearchMultiplier(i) * GlobalResearchMultiplier * FleetGeneratorMultiplier(i);
         public double GeneratorProduction(int i, long now) => BaseGeneratorProduction(i) * GlobalMultiplier(now);
 
         double RawProduction()
@@ -150,7 +151,7 @@ namespace StellarIdle.Core
 
         public double TapValue(long now) =>
             (Balance.tapBaseValue * GlobalMultiplier(now) + ProductionPerSecond(now) * (Balance.tapProductionShare + TreeTapShare))
-            * TreeTapMultiplier;
+            * TreeTapMultiplier * FleetTapMultiplier;
 
         public double Tap(long now)
         {
@@ -187,7 +188,7 @@ namespace StellarIdle.Core
             double counted = Math.Min(elapsed, OfflineCapSeconds);
             double perSecond = RawProduction() * PermanentMultiplier * OfflineEfficiency;
             double boostedSeconds = Math.Max(0, Math.Min(State.boostEndsAtUnix - since, counted));
-            double amount = perSecond * (counted + boostedSeconds * (BoostMultiplier - 1));
+            double amount = perSecond * (counted + boostedSeconds * (BoostMultiplier - 1)) * FleetOfflineMultiplier;
             return new OfflineReport(elapsed, amount, elapsed > OfflineCapSeconds);
         }
 
@@ -224,7 +225,7 @@ namespace StellarIdle.Core
         /// <summary>Credits a bonus drop gives right now: a few minutes of production, never less than the floor.</summary>
         public double BonusDropReward =>
             Math.Max(Balance.bonusDropMinReward, RawProduction() * PermanentMultiplier * Balance.bonusDropProductionSeconds)
-            * BonusDropMultiplier;
+            * BonusDropMultiplier * FleetBonusDropMultiplier;
 
         /// <summary>False once the hourly cap is reached (counted per rolling one-hour window, persisted).</summary>
         public bool CanSpawnBonusDrop(long now) =>
@@ -241,13 +242,14 @@ namespace StellarIdle.Core
             State.bonusDropsInWindow++;
             double reward = BonusDropReward;
             Earn(reward);
+            LastBonusDropShards = Rng.NextDouble() < Balance.bonusDropShardChance ? RollShards(1) : NoShards;
             return reward;
         }
 
         // ---------- Prestige ----------
 
         public double PendingDarkMatter =>
-            Math.Floor(Math.Sqrt(State.runEarnings / Balance.prestigeDivisor) * DarkMatterGainMultiplier);
+            Math.Floor(Math.Sqrt(State.runEarnings / Balance.prestigeDivisor) * DarkMatterGainMultiplier * FleetDarkMatterMultiplier);
         public bool CanPrestige => PendingDarkMatter >= 1;
 
         /// <summary>Earnings needed this run to be able to prestige for the first point.</summary>
@@ -269,6 +271,7 @@ namespace StellarIdle.Core
             State.research.Clear();
             ReloadResearched();
             State.credits = StartingCredits;
+            LastWarpChest = RollShards(Balance.warpChestRolls);
             return gain;
         }
 

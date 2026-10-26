@@ -82,6 +82,51 @@ namespace StellarIdle.Core
         public const string PrestigeBonus = "prestigeBonus";         // passive bonus per Dark Matter +value x level
     }
 
+    /// <summary>Ship rarity: drop weight, shards to build the ship and to reach each extra star.</summary>
+    [Serializable]
+    public class ShipRarityDef
+    {
+        public string id;
+        public string name;
+        public double weight;          // relative chance per shard roll
+        public int unlockShards;       // to build the ship (1 star)
+        public int[] starCosts = Array.Empty<int>(); // shards for 2, 3, 4, 5 stars
+    }
+
+    /// <summary>A collectible ship. Its bonus applies while it is in the active fleet.</summary>
+    [Serializable]
+    public class ShipDef
+    {
+        public string id;
+        public string name;
+        public string rarity;    // ShipRarityDef.id
+        public string role;      // see ShipRole
+        public string generator; // miner only: GeneratorDef.id it boosts
+        public double value;     // bonus at 1 star
+    }
+
+    public static class ShipRole
+    {
+        public const string Miner = "miner";         // +value production of one building
+        public const string Cruiser = "cruiser";     // +value tap power
+        public const string Freighter = "freighter"; // +value cargo pod credits
+        public const string Scout = "scout";         // +value offline earnings
+        public const string Flagship = "flagship";   // +value production of everything
+        public const string Harbinger = "harbinger"; // +value Dark Matter from warps
+    }
+
+    /// <summary>Timed mission a ship (not in the active fleet) can be sent on.</summary>
+    [Serializable]
+    public class ExpeditionDef
+    {
+        public string id;
+        public string name;
+        public double minutes;
+        public int rolls;               // shard rolls (+ bonus by ship rarity)
+        public long crystals;
+        public double productionMinutes; // credits = this many minutes of production x ship stars
+    }
+
     /// <summary>
     /// Every tunable number of the game lives here so balancing never requires a code change
     /// (and can later be driven by Remote Config).
@@ -152,6 +197,19 @@ namespace StellarIdle.Core
         public int[] achievementWarpThresholds = Array.Empty<int>();
         public long[] achievementWarpRewards = Array.Empty<long>();
 
+        // Ships, fleet and expeditions
+        public ShipRarityDef[] shipRarities = Array.Empty<ShipRarityDef>();
+        public ShipDef[] ships = Array.Empty<ShipDef>();
+        public ExpeditionDef[] expeditions = Array.Empty<ExpeditionDef>();
+        public int[] fleetSlotWarps = { 0, 0, 0, 1, 5 }; // one slot per entry, unlocked at that many warps
+        public int expeditionSlots = 3;
+        public int shardsPerRoll = 5;
+        public double shipStarBonus = 0.5;   // each star above 1 adds 50% of the base bonus
+        public int warpChestRolls = 3;
+        public double bonusDropShardChance = 0.3;
+        public double expeditionAdSpeedup = 0.5; // a rewarded ad cuts the remaining time by half
+        public string starterShip = "";
+
         public GeneratorDef[] generators = Array.Empty<GeneratorDef>();
 
         public void Validate()
@@ -163,6 +221,13 @@ namespace StellarIdle.Core
             researchTiers ??= Array.Empty<ResearchTierDef>();
             globalResearch ??= Array.Empty<GlobalResearchDef>();
             skillTiers ??= Array.Empty<SkillTierDef>();
+            shipRarities ??= Array.Empty<ShipRarityDef>();
+            ships ??= Array.Empty<ShipDef>();
+            expeditions ??= Array.Empty<ExpeditionDef>();
+            fleetSlotWarps ??= Array.Empty<int>();
+            foreach (var ship in ships)
+                if (Array.FindIndex(shipRarities, r => r.id == ship.rarity) < 0)
+                    throw new InvalidOperationException($"GameBalance: ship '{ship.id}' has unknown rarity '{ship.rarity}'.");
             foreach (var tier in skillTiers) tier.nodes ??= Array.Empty<SkillNodeDef>();
             achievementOwnedThresholds ??= Array.Empty<int>();
             achievementOwnedRewards ??= Array.Empty<long>();

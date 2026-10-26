@@ -12,6 +12,7 @@ namespace StellarIdle.UI
     ///   Art/planet              the tappable planet (square, transparent corners)
     ///   Art/cargo_pod           bonus drop pod
     ///   Art/Generators/{id}     one icon per generator id from GameBalance.json (drone, harvester, ...)
+    ///   Art/Ships/{id}          one image per ship id from GameBalance.json (rusty_miner, courier, ...)
     ///   Art/Icons/crystal, Art/Icons/dark_matter
     /// </summary>
     public static class Art
@@ -29,6 +30,7 @@ namespace StellarIdle.UI
         }
         public static Sprite CargoPod => Custom("cargo_pod");
         public static Sprite Generator(string id) => Custom("Generators/" + id);
+        public static Sprite Ship(string id) => Custom("Ships/" + id);
         public static Sprite CrystalIcon => Custom("Icons/crystal");
         public static Sprite DarkMatterIcon => Custom("Icons/dark_matter");
 

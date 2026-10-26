@@ -122,6 +122,51 @@ namespace StellarIdle.UI
         public const string FxDarkMatterGain = "+{0}% Dark Matter from warps";
         public const string FxPrestigeBonus = "+{0}% bonus per Dark Matter";
 
+        // Fleet
+        public const string TabFleet = "Fleet";
+        public const string FleetHeader = "Active fleet  {0}/{1}";
+        public const string FleetNextSlot = "Next slot after {0} warps";
+        public const string FleetAllSlots = "All slots unlocked";
+        public const string SlotEmpty = "Empty slot\n<size=22>Equip a ship below</size>";
+        public const string SlotLocked = "Locked\n<size=22>{0} warps</size>";
+        public const string ExpeditionsHeader = "Expeditions  {0}/{1}";
+        public const string ExpeditionTitle = "{0} -> {1}";
+        public const string ExpeditionLeft = "{0} left";
+        public const string ExpeditionReady = "Back home!";
+        public const string ExpeditionCollect = "Collect";
+        public const string ExpeditionSpeedUp = "Speed up\n(ad)";
+        public const string ExpeditionSpeedUpVip = "Speed up\n(VIP)";
+        public const string DestinationDetails = "{0} shard rolls{1}, credits";
+        public const string DestinationCrystals = ", {0} crystals";
+        public const string Send = "Send";
+        public const string ChooseShip = "Choose a ship";
+        public const string ChooseShipBody = "{0} ({1}). Ships in the active fleet stay home.";
+        public const string NoIdleShip = "No ship available: unequip one or wait for a return.";
+        public const string ExpeditionDone = "Expedition complete!";
+        public const string ExpeditionLoot = "+{0} credits{1}\n{2}";
+        public const string HangarHeader = "Hangar  {0}/{1} ships";
+        public const string ShipTitle = "{0}  <color=#{1}>{2}</color>";
+        public const string ShipUnknown = "Unknown {0} ship";
+        public const string ShipLevel = "Lv {0}/{1}";
+        public const string ShipShards = "{0}/{1} shards";
+        public const string ShipShardsMax = "Max level";
+        public const string ShipBuild = "Build";
+        public const string ShipStarUp = "Level up";
+        public const string ShipEquip = "Equip";
+        public const string ShipUnequip = "Unequip";
+        public const string ShipOnMission = "On mission";
+        public const string ShipBuilt = "{0} joins your fleet!";
+        public const string ShipLeveled = "{0} reached level {1}!";
+        public const string FleetFull = "Fleet is full: unequip a ship first.";
+        public const string WarpChestTitle = "Warp chest";
+        public const string ShardsFound = "Shards: {0}";
+        public const string RoleMiner = "+{0}% {1} production";
+        public const string RoleCruiser = "+{0}% tap power";
+        public const string RoleFreighter = "+{0}% cargo pod credits";
+        public const string RoleScout = "+{0}% offline earnings";
+        public const string RoleFlagship = "+{0}% all production";
+        public const string RoleHarbinger = "+{0}% Dark Matter from warps";
+
         // Goals
         public const string GoalOwned = "Own {1} {0}";
         public const string GoalEarnings = "Earn {0} credits";

@@ -26,6 +26,17 @@ namespace StellarIdle.UI
         public static Color Branch(string branch) =>
             branch == Core.SkillBranch.Command ? Command : branch == Core.SkillBranch.Logistics ? Logistics : Industry;
 
+        static readonly Color[] RarityColors =
+        {
+            new Color32(170, 175, 190, 255), // common
+            new Color32(80, 200, 110, 255),  // uncommon
+            new Color32(70, 150, 255, 255),  // rare
+            new Color32(185, 95, 255, 255),  // epic
+            new Color32(255, 190, 50, 255),  // legendary
+        };
+
+        public static Color Rarity(int index) => RarityColors[Mathf.Clamp(index, 0, RarityColors.Length - 1)];
+
         /// <summary>A distinct, pleasant color per generator index.</summary>
         public static Color GeneratorColor(int index) => Color.HSVToRGB(index * 0.13f % 1f, 0.55f, 0.95f);
     }

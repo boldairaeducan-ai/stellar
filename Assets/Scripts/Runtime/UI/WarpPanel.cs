@@ -247,6 +247,10 @@ namespace StellarIdle.UI
                     double gain = Ctx.Game.DoPrestige();
                     Ctx.Flash();
                     Ctx.Toast(string.Format(Strings.PrestigeDone, NumberFormat.Format(gain)));
+                    if (Eco.LastWarpChest.Count > 0)
+                        Popup.Show(Ctx.PopupRoot, Strings.WarpChestTitle,
+                            string.Format(Strings.ShardsFound, ShipText.Shards(Eco, Eco.LastWarpChest)),
+                            new Popup.Choice(Strings.Close, Theme.Buy));
                     Ctx.RequestRefresh();
                 }),
                 new Popup.Choice(Strings.Cancel, Theme.Disabled));

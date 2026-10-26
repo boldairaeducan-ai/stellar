@@ -147,6 +147,7 @@ namespace StellarIdle.UI
             floats = floatLayer.gameObject.AddComponent<FloatingTextPool>();
 
             toastText = UIFactory.Text("Toast", root, "", 44, Theme.Text, TextAnchor.MiddleCenter, FontStyle.Bold);
+            toastText.supportRichText = true;
             toastText.rectTransform.Anchor(new Vector2(0, 0.72f), new Vector2(1, 0.72f), new Vector2(40, -60), new Vector2(-40, 60));
             toastText.gameObject.AddComponent<Outline>().effectColor = Color.black;
             toastText.color = Color.clear;
@@ -221,12 +222,13 @@ namespace StellarIdle.UI
                 new BuildingsPanel(ctx, area),
                 new ResearchPanel(ctx, area),
                 new WarpPanel(ctx, area),
+                new FleetPanel(ctx, area),
                 new GoalsPanel(ctx, area),
                 new ShopPanel(ctx, area),
             };
 
             var bar = UIFactory.Rect("TabBar", parent).Anchor(Vector2.zero, new Vector2(1, 0), new Vector2(12, 12), new Vector2(-12, 158));
-            tabBar = new TabBar(bar, new[] { Strings.TabBuild, Strings.TabResearch, Strings.TabWarp, Strings.TabGoals, Strings.TabShop });
+            tabBar = new TabBar(bar, new[] { Strings.TabBuild, Strings.TabResearch, Strings.TabWarp, Strings.TabFleet, Strings.TabGoals, Strings.TabShop });
             tabBar.Selected += SelectTab;
         }
 
@@ -357,7 +359,10 @@ namespace StellarIdle.UI
                         double gained = Eco.ClaimBonusDrop(Clock.Now);
                         game.Save();
                         creditsPunch.Play(0.15f);
-                        Toast(string.Format(Strings.DropCollected, NumberFormat.Format(gained)));
+                        string toast = string.Format(Strings.DropCollected, NumberFormat.Format(gained));
+                        if (Eco.LastBonusDropShards.Count > 0)
+                            toast += "\n" + string.Format(Strings.ShardsFound, ShipText.Shards(Eco, Eco.LastBonusDropShards));
+                        Toast(toast);
                         Refresh();
                     }, () => Toast(Strings.AdUnavailable))),
                 new Popup.Choice(Strings.DropSkip, Theme.Disabled));
