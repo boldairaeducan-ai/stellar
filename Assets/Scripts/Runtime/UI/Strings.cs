@@ -158,6 +158,15 @@ namespace StellarIdle.UI
         public const string ShipBuilt = "{0} joins your fleet!";
         public const string ShipLeveled = "{0} reached level {1}!";
         public const string FleetFull = "Fleet is full: unequip a ship first.";
+        public const string DistressTitle = "Distress signal";
+        public const string DistressStreak = "  <color=#FFC440>{0}-day streak</color>";
+        public const string DistressDetails = "Answer for {0} shard rolls";
+        public const string DistressNextBonus = " (+1 roll at a {0}-day streak)";
+        public const string DistressDone = "Next signal tomorrow. Come back to keep your streak!";
+        public const string DistressAnswer = "Answer\n(ad)";
+        public const string DistressAnswerVip = "Answer\n(VIP)";
+        public const string DistressTomorrow = "Tomorrow";
+        public const string DistressResultTitle = "Survivors rescued!";
         public const string WarpChestTitle = "Warp chest";
         public const string ShardsFound = "Shards: {0}";
         public const string RoleMiner = "+{0}% {1} production";
@@ -171,6 +180,9 @@ namespace StellarIdle.UI
         public const string GoalOwned = "Own {1} {0}";
         public const string GoalEarnings = "Earn {0} credits";
         public const string GoalWarps = "Warp {0} time(s)";
+        public const string GoalShipsBuilt = "Build {0} ships";
+        public const string GoalRarityComplete = "Complete all {0} ships";
+        public const string GoalShipsMaxed = "Bring {0} ship(s) to max level";
         public const string GoalClaim = "Claim\n+{0} crystals";
         public const string GoalReward = "+{0} crystals";
         public const string GoalDone = "Done";

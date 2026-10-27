@@ -8,6 +8,9 @@ namespace StellarIdle
     public static class Clock
     {
         public static long Now => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+        /// <summary>Day number of the device's local date: daily rewards reset at local midnight.</summary>
+        public static int LocalDay => (int)(DateTime.Now.Date - new DateTime(2020, 1, 1)).TotalDays;
     }
 
     /// <summary>

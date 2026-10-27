@@ -161,6 +161,34 @@ namespace StellarIdle.Core
             return gains;
         }
 
+        // ---------- Daily distress signal (rewarded ad) ----------
+
+        /// <summary>Available once per local day. <paramref name="day"/> is a day number from the device's local date;
+        /// a clock set back never re-opens a signal already answered.</summary>
+        public bool CanAnswerDistressSignal(int day) => day > State.distressSignalDay;
+
+        /// <summary>Streak the player would reach by answering today (resets after a missed day).</summary>
+        public int DistressStreakIfAnswered(int day) =>
+            State.distressSignalDay == day - 1 ? State.distressStreak + 1 : 1;
+
+        public int DistressSignalRolls(int day)
+        {
+            int streak = CanAnswerDistressSignal(day) ? DistressStreakIfAnswered(day) : State.distressStreak;
+            int rolls = Balance.distressSignalRolls;
+            foreach (int days in Balance.distressStreakDays)
+                if (streak >= days) rolls++;
+            return rolls;
+        }
+
+        public IReadOnlyList<ShardGain> AnswerDistressSignal(int day)
+        {
+            if (!CanAnswerDistressSignal(day)) return NoShards;
+            int rolls = DistressSignalRolls(day);
+            State.distressStreak = DistressStreakIfAnswered(day);
+            State.distressSignalDay = day;
+            return RollShards(rolls);
+        }
+
         // ---------- Active fleet ----------
 
         public int FleetSlots

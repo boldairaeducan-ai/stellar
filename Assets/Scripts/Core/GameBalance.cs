@@ -196,6 +196,11 @@ namespace StellarIdle.Core
         public long[] achievementEarningsRewards = Array.Empty<long>();
         public int[] achievementWarpThresholds = Array.Empty<int>();
         public long[] achievementWarpRewards = Array.Empty<long>();
+        public int[] achievementShipsBuiltThresholds = Array.Empty<int>();
+        public long[] achievementShipsBuiltRewards = Array.Empty<long>();
+        public long[] achievementRarityCompleteRewards = Array.Empty<long>(); // one per rarity, in shipRarities order
+        public int[] achievementShipsMaxedThresholds = Array.Empty<int>();
+        public long[] achievementShipsMaxedRewards = Array.Empty<long>();
 
         // Ships, fleet and expeditions
         public ShipRarityDef[] shipRarities = Array.Empty<ShipRarityDef>();
@@ -209,6 +214,10 @@ namespace StellarIdle.Core
         public double bonusDropShardChance = 0.3;
         public double expeditionAdSpeedup = 0.5; // a rewarded ad cuts the remaining time by half
         public string starterShip = "";
+
+        // Daily distress signal (rewarded ad): shard rolls once per local day, more with a streak.
+        public int distressSignalRolls = 2;
+        public int[] distressStreakDays = { 3, 7 }; // +1 roll from each of these consecutive-day streaks
 
         public GeneratorDef[] generators = Array.Empty<GeneratorDef>();
 
@@ -235,9 +244,17 @@ namespace StellarIdle.Core
             achievementEarningsRewards ??= Array.Empty<long>();
             achievementWarpThresholds ??= Array.Empty<int>();
             achievementWarpRewards ??= Array.Empty<long>();
+            achievementShipsBuiltThresholds ??= Array.Empty<int>();
+            achievementShipsBuiltRewards ??= Array.Empty<long>();
+            achievementRarityCompleteRewards ??= Array.Empty<long>();
+            achievementShipsMaxedThresholds ??= Array.Empty<int>();
+            achievementShipsMaxedRewards ??= Array.Empty<long>();
+            distressStreakDays ??= Array.Empty<int>();
             if (achievementOwnedRewards.Length < achievementOwnedThresholds.Length
                 || achievementEarningsRewards.Length < achievementEarningsThresholds.Length
-                || achievementWarpRewards.Length < achievementWarpThresholds.Length)
+                || achievementWarpRewards.Length < achievementWarpThresholds.Length
+                || achievementShipsBuiltRewards.Length < achievementShipsBuiltThresholds.Length
+                || achievementShipsMaxedRewards.Length < achievementShipsMaxedThresholds.Length)
                 throw new InvalidOperationException("GameBalance: each achievement threshold needs a reward.");
             foreach (var g in generators)
             {

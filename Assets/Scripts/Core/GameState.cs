@@ -68,6 +68,8 @@ namespace StellarIdle.Core
         public List<string> fleet = new List<string>();                 // equipped ship ids
         public List<ExpeditionSave> expeditions = new List<ExpeditionSave>();
         public bool starterShipGiven;
+        public int distressSignalDay;    // local day number of the last claim
+        public int distressStreak;       // consecutive days claimed
 
         public static GameState CreateNew(long nowUnix) => new GameState { lastSeenUnix = nowUnix };
 

@@ -46,6 +46,13 @@ namespace StellarIdle.Tests
                 new ExpeditionDef { id = "sweep", minutes = 30, rolls = 1, crystals = 2, productionMinutes = 10 },
             },
             starterShip = "miner_b",
+            distressSignalRolls = 2,
+            distressStreakDays = new[] { 3 },
+            achievementShipsBuiltThresholds = new[] { 1, 2 },
+            achievementShipsBuiltRewards = new long[] { 5, 10 },
+            achievementRarityCompleteRewards = new long[] { 20 },
+            achievementShipsMaxedThresholds = new[] { 1 },
+            achievementShipsMaxedRewards = new long[] { 30 },
             achievementOwnedThresholds = new[] { 25 },
             achievementOwnedRewards = new long[] { 5 },
             achievementWarpThresholds = new[] { 1 },
@@ -324,7 +331,7 @@ namespace StellarIdle.Tests
             eco.Prestige(); // count reset, best kept, warp_1 complete
             var own = FindAchievement(eco, AchievementKind.Owned);
             var warp = FindAchievement(eco, AchievementKind.Warps);
-            Assert.AreEqual(2, eco.ClaimableAchievementCount);
+            Assert.AreEqual(3, eco.ClaimableAchievementCount); // + "build 1 ship" from the starter ship
             long crystals = eco.State.crystals;
             Assert.IsTrue(eco.TryClaimAchievement(own));
             Assert.IsFalse(eco.TryClaimAchievement(own));
@@ -431,6 +438,59 @@ namespace StellarIdle.Tests
             eco.Earn(1e6);
             eco.Prestige();
             Assert.AreEqual(eco.Balance.warpChestRolls, eco.LastWarpChest.Count);
+        }
+
+        [Test]
+        public void DistressSignal_OncePerDay_StreakAddsRolls()
+        {
+            var eco = NewEconomy();
+            eco.Rng = new System.Random(7);
+            Assert.IsTrue(eco.CanAnswerDistressSignal(100));
+            Assert.AreEqual(2, eco.AnswerDistressSignal(100).Count);
+            Assert.IsFalse(eco.CanAnswerDistressSignal(100));
+            Assert.AreEqual(0, eco.AnswerDistressSignal(100).Count);
+
+            eco.AnswerDistressSignal(101);
+            Assert.AreEqual(3, eco.DistressSignalRolls(102)); // 3-day streak
+            Assert.AreEqual(3, eco.AnswerDistressSignal(102).Count);
+            Assert.AreEqual(3, eco.State.distressStreak);
+
+            Assert.AreEqual(2, eco.DistressSignalRolls(105)); // missed days: streak restarts
+            eco.AnswerDistressSignal(105);
+            Assert.AreEqual(1, eco.State.distressStreak);
+            Assert.IsFalse(eco.CanAnswerDistressSignal(104)); // clock moved back
+        }
+
+        [Test]
+        public void CollectionAchievements_TrackBuiltCompletedAndMaxedShips()
+        {
+            var eco = NewEconomy();
+            var shipsOne = FindAchievementById(eco, "ships_1");
+            var shipsTwo = FindAchievementById(eco, "ships_2");
+            var common = FindAchievementById(eco, "rarity_common");
+            var maxed = FindAchievementById(eco, "maxed_1");
+
+            Assert.IsTrue(eco.CanClaimAchievement(shipsOne)); // starter ship
+            Assert.IsFalse(eco.CanClaimAchievement(shipsTwo));
+            Assert.AreEqual(0.5, eco.AchievementRatio(common), 1e-9);
+
+            var cruiser = eco.FindShip("cruiser");
+            eco.State.ships.Add(new ShipSave { id = "cruiser", shards = 1000 });
+            eco.TryUpgradeShip(cruiser);
+            Assert.IsTrue(eco.CanClaimAchievement(shipsTwo));
+            Assert.IsTrue(eco.CanClaimAchievement(common));
+            Assert.IsFalse(eco.CanClaimAchievement(maxed));
+
+            while (eco.TryUpgradeShip(cruiser)) { }
+            Assert.AreEqual(IdleEconomy.MaxStars, eco.Stars(cruiser));
+            Assert.IsTrue(eco.CanClaimAchievement(maxed));
+        }
+
+        static AchievementDef FindAchievementById(IdleEconomy eco, string id)
+        {
+            foreach (var a in eco.Achievements)
+                if (a.Id == id) return a;
+            return null;
         }
 
         static ResearchItem FindResearch(IdleEconomy eco, int generator)

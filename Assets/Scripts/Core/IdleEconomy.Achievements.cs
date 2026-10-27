@@ -8,6 +8,9 @@ namespace StellarIdle.Core
         Owned,     // own N of a generator (best count ever, survives prestige)
         Earnings,  // earn N credits in total
         Warps,     // warp N times
+        ShipsBuilt,      // build N different ships
+        RarityComplete,  // build every ship of one rarity
+        ShipsMaxed,      // bring N ships to max level
     }
 
     public sealed class AchievementDef
@@ -15,6 +18,7 @@ namespace StellarIdle.Core
         public string Id;
         public AchievementKind Kind;
         public int Generator; // Owned only
+        public int Rarity;    // RarityComplete only (index in shipRarities)
         public double Target;
         public long Reward;   // crystals
     }
@@ -56,6 +60,37 @@ namespace StellarIdle.Core
                     Reward = Balance.achievementWarpRewards[k],
                 });
 
+            for (int k = 0; k < Balance.achievementShipsBuiltThresholds.Length; k++)
+                achievements.Add(new AchievementDef
+                {
+                    Id = $"ships_{Balance.achievementShipsBuiltThresholds[k]}",
+                    Kind = AchievementKind.ShipsBuilt,
+                    Target = Math.Min(Balance.achievementShipsBuiltThresholds[k], Balance.ships.Length),
+                    Reward = Balance.achievementShipsBuiltRewards[k],
+                });
+            for (int r = 0; r < Balance.shipRarities.Length && r < Balance.achievementRarityCompleteRewards.Length; r++)
+            {
+                string rarity = Balance.shipRarities[r].id;
+                int count = Array.FindAll(Balance.ships, s => s.rarity == rarity).Length;
+                if (count == 0) continue;
+                achievements.Add(new AchievementDef
+                {
+                    Id = $"rarity_{rarity}",
+                    Kind = AchievementKind.RarityComplete,
+                    Rarity = r,
+                    Target = count,
+                    Reward = Balance.achievementRarityCompleteRewards[r],
+                });
+            }
+            for (int k = 0; k < Balance.achievementShipsMaxedThresholds.Length; k++)
+                achievements.Add(new AchievementDef
+                {
+                    Id = $"maxed_{Balance.achievementShipsMaxedThresholds[k]}",
+                    Kind = AchievementKind.ShipsMaxed,
+                    Target = Balance.achievementShipsMaxedThresholds[k],
+                    Reward = Balance.achievementShipsMaxedRewards[k],
+                });
+
             claimedAchievements.Clear();
             foreach (var id in State.achievementsClaimed) claimedAchievements.Add(id);
         }
@@ -67,8 +102,21 @@ namespace StellarIdle.Core
                 case AchievementKind.Owned: return State.generators[a.Generator].best;
                 case AchievementKind.Earnings: return State.totalEarnings;
                 case AchievementKind.Warps: return State.prestigeCount;
+                case AchievementKind.ShipsBuilt: return CountShips(s => IsShipBuilt(s));
+                case AchievementKind.RarityComplete:
+                    string rarity = Balance.shipRarities[a.Rarity].id;
+                    return CountShips(s => s.rarity == rarity && IsShipBuilt(s));
+                case AchievementKind.ShipsMaxed: return CountShips(s => Stars(s) >= MaxStars);
                 default: return 0;
             }
+        }
+
+        int CountShips(Predicate<ShipDef> match)
+        {
+            int n = 0;
+            foreach (var ship in Balance.ships)
+                if (match(ship)) n++;
+            return n;
         }
 
         /// <summary>0..1 completion ratio.</summary>

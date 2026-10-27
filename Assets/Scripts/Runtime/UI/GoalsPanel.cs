@@ -43,9 +43,7 @@ namespace StellarIdle.UI
                 string progress = $"{NumberFormat.Format(System.Math.Min(eco.AchievementProgress(a), a.Target))} / {NumberFormat.Format(a.Target)}";
                 row.SetTexts(Title(eco, a), claimed ? Strings.GoalDone : $"{progress}   {string.Format(Strings.GoalReward, a.Reward)}");
                 row.SetProgress((float)eco.AchievementRatio(a));
-                row.SetIcon(a.Kind == AchievementKind.Owned ? Art.Generator(eco.Def(a.Generator).id) : Art.CrystalIcon,
-                    claimed ? Theme.Disabled : a.Kind == AchievementKind.Owned ? Theme.GeneratorColor(a.Generator) : Theme.Premium,
-                    a.Kind == AchievementKind.Owned ? Initial(eco.Def(a.Generator).name) : a.Kind == AchievementKind.Warps ? "W" : "$");
+                SetGoalIcon(eco, row, a, claimed);
                 row.SetHighlight(claimable);
                 row.SetButton(claimed ? Strings.GoalDone : string.Format(Strings.GoalClaim, a.Reward), claimable, Theme.Premium);
             }
@@ -72,6 +70,27 @@ namespace StellarIdle.UI
             }
         }
 
+        static void SetGoalIcon(IdleEconomy eco, ListRow row, AchievementDef a, bool claimed)
+        {
+            switch (a.Kind)
+            {
+                case AchievementKind.Owned:
+                    var def = eco.Def(a.Generator);
+                    row.SetIcon(Art.Generator(def.id), claimed ? Theme.Disabled : Theme.GeneratorColor(a.Generator), Initial(def.name));
+                    break;
+                case AchievementKind.ShipsBuilt:
+                case AchievementKind.ShipsMaxed:
+                    row.SetIcon(null, claimed ? Theme.Disabled : Theme.Rarity(a.Kind == AchievementKind.ShipsMaxed ? 4 : 2), "S");
+                    break;
+                case AchievementKind.RarityComplete:
+                    row.SetIcon(null, claimed ? Theme.Disabled : Theme.Rarity(a.Rarity), "S");
+                    break;
+                default:
+                    row.SetIcon(Art.CrystalIcon, claimed ? Theme.Disabled : Theme.Premium, a.Kind == AchievementKind.Warps ? "W" : "$");
+                    break;
+            }
+        }
+
         static int Rank(IdleEconomy eco, AchievementDef a) =>
             eco.CanClaimAchievement(a) ? 0 : eco.IsAchievementClaimed(a) ? 2 : 1;
 
@@ -81,7 +100,11 @@ namespace StellarIdle.UI
             {
                 case AchievementKind.Owned: return string.Format(Strings.GoalOwned, eco.Def(a.Generator).name, a.Target);
                 case AchievementKind.Earnings: return string.Format(Strings.GoalEarnings, NumberFormat.Format(a.Target));
-                default: return string.Format(Strings.GoalWarps, a.Target);
+                case AchievementKind.Warps: return string.Format(Strings.GoalWarps, a.Target);
+                case AchievementKind.ShipsBuilt: return string.Format(Strings.GoalShipsBuilt, a.Target);
+                case AchievementKind.RarityComplete:
+                    return string.Format(Strings.GoalRarityComplete, eco.Balance.shipRarities[a.Rarity].name);
+                default: return string.Format(Strings.GoalShipsMaxed, a.Target);
             }
         }
 

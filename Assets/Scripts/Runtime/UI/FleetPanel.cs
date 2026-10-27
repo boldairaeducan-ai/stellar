@@ -14,6 +14,7 @@ namespace StellarIdle.UI
         const int MaxShipChoices = 6;
 
         readonly Text fleetHeader, expeditionsHeader, hangarHeader;
+        readonly ListRow distressRow;
         readonly Button[] slotButtons;
         readonly Text[] slotLabels;
         readonly ListRow[] activeRows;
@@ -24,6 +25,8 @@ namespace StellarIdle.UI
         public FleetPanel(UIContext ctx, Transform parent) : base(ctx, parent, "Fleet")
         {
             var eco = Eco;
+
+            distressRow = new ListRow(Content, "DistressSignal", AnswerDistressSignal);
 
             fleetHeader = AddHeader("", 32, 70);
             var slots = UIFactory.Rect("Slots", Content);
@@ -73,6 +76,7 @@ namespace StellarIdle.UI
             {
                 var eco = Eco;
                 int count = eco.ReadyExpeditionCount(Clock.Now) + eco.UpgradableShipCount;
+                if (eco.CanAnswerDistressSignal(Clock.LocalDay)) count++;
                 if (eco.State.fleet.Count < eco.FleetSlots && HasIdleShip(eco)) count++;
                 return count;
             }
@@ -88,9 +92,34 @@ namespace StellarIdle.UI
         public override void Refresh(long now)
         {
             var eco = Eco;
+            RefreshDistress(eco);
             RefreshFleet(eco);
             RefreshExpeditions(eco, now);
             RefreshHangar(eco);
+        }
+
+        void RefreshDistress(IdleEconomy eco)
+        {
+            int day = Clock.LocalDay;
+            bool available = eco.CanAnswerDistressSignal(day);
+            int streak = available ? eco.DistressStreakIfAnswered(day) - 1 : eco.State.distressStreak;
+            string title = Strings.DistressTitle + (streak > 1 ? string.Format(Strings.DistressStreak, streak) : "");
+
+            string details;
+            if (available)
+            {
+                details = string.Format(Strings.DistressDetails, eco.DistressSignalRolls(day));
+                int target = eco.DistressStreakIfAnswered(day);
+                foreach (int days in eco.Balance.distressStreakDays)
+                    if (days > target) { details += string.Format(Strings.DistressNextBonus, days); break; }
+            }
+            else details = Strings.DistressDone;
+
+            distressRow.SetIcon(null, Theme.Ad, "!");
+            distressRow.SetTexts(title, details);
+            distressRow.SetHighlight(available);
+            distressRow.SetButton(available ? (Ctx.Game.SkipsAds ? Strings.DistressAnswerVip : Strings.DistressAnswer) : Strings.DistressTomorrow,
+                available, Theme.Ad);
         }
 
         void RefreshFleet(IdleEconomy eco)
@@ -209,6 +238,22 @@ namespace StellarIdle.UI
         }
 
         // ---------- Actions ----------
+
+        void AnswerDistressSignal()
+        {
+            if (!Eco.CanAnswerDistressSignal(Clock.LocalDay)) return;
+            Ctx.Game.RequestReward(AdPlacements.DistressSignal, () =>
+            {
+                var gains = Eco.AnswerDistressSignal(Clock.LocalDay);
+                if (gains.Count == 0) return;
+                distressRow.Punch(0.1f);
+                Ctx.Game.Save();
+                Popup.Show(Ctx.PopupRoot, Strings.DistressResultTitle,
+                    string.Format(Strings.ShardsFound, ShipText.Shards(Eco, gains)),
+                    new Popup.Choice(Strings.Close, Theme.Buy));
+                Ctx.RequestRefresh();
+            }, () => Ctx.Toast(Strings.AdUnavailable));
+        }
 
         void OnSlotClicked(int index)
         {

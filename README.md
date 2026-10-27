@@ -10,8 +10,8 @@ Le joueur tape sur une planète pour gagner des crédits, achète des bâtiments
 | **Build** | Acheter des bâtiments (x1 / x10 / MAX). Production x2 à 10, 25, 50, 100… exemplaires (barre de progression). | Oui |
 | **Research** | Achats uniques en crédits : x3 par bâtiment (à 10/25/50/100/200 exemplaires) et x2 global. Donne une décision toutes les quelques minutes en milieu de partie. | Oui |
 | **Warp** | Prestige : gain de Matière noire = √(crédits gagnés dans la galaxie / 1M). Chaque point **gagné** donne +2 % passif. La Matière noire se **dépense** dans un arbre de 6 paliers × 3 voies (Industrie / Commandement / Logistique) : un seul nœud par palier, paliers débloqués par la Matière noire gagnée au total (0 → 1200), effets de plus en plus forts. Réinitialisation : 1ʳᵉ gratuite, puis 50 cristaux. | Non |
-| **Fleet** | Collection de 20 vaisseaux (Commun → Légendaire). **Flotte active** : 3 emplacements (4 après 1 Warp, 5 après 5) ; chaque vaisseau équipé donne son bonus (Mineur : un bâtiment, Croiseur : tap, Cargo : capsules, Éclaireur : hors ligne, Amiral : tout, Faucheur : Matière noire). **Expéditions** (30 min / 2 h / 8 h) pour les vaisseaux non équipés : crédits, cristaux et fragments ; une pub divise le temps restant par deux. **Fragments** : construire puis monter jusqu'au niveau 5 (+50 % du bonus par niveau). Sources gratuites uniquement : expéditions, coffre de Warp (3 tirages), capsules cargo (30 %). Un premier vaisseau est offert. | Non |
-| **Goals** | Succès (bâtiments possédés, crédits gagnés, nombre de Warps) récompensés en cristaux. | Non |
+| **Fleet** | Collection de 20 vaisseaux (Commun → Légendaire). **Flotte active** : 3 emplacements (4 après 1 Warp, 5 après 5) ; chaque vaisseau équipé donne son bonus (Mineur : un bâtiment, Croiseur : tap, Cargo : capsules, Éclaireur : hors ligne, Amiral : tout, Faucheur : Matière noire). **Expéditions** (30 min / 2 h / 8 h) pour les vaisseaux non équipés : crédits, cristaux et fragments ; une pub divise le temps restant par deux. **Fragments** : construire puis monter jusqu'au niveau 5 (+50 % du bonus par niveau). Sources gratuites uniquement : expéditions, coffre de Warp (3 tirages), capsules cargo (30 %). Un premier vaisseau est offert. **Signal de détresse** quotidien (remise à zéro à minuit, heure locale) : une pub = 2 tirages, +1 tirage avec une série de 3 jours, +2 avec 7 jours. | Non |
+| **Goals** | Succès (bâtiments possédés, crédits gagnés, nombre de Warps, vaisseaux construits, raretés complétées, vaisseaux au niveau max) récompensés en cristaux. | Non |
 | **Shop** | Achats intégrés, Time Warp (cristaux), restauration, confidentialité. | — |
 
 Les onglets affichent une pastille quand une action est possible. Tous les chiffres sont dans `GameBalance.json`.
@@ -63,7 +63,7 @@ Assets/
     UI/                        ← MainScreen + un panneau par onglet (BuildingsPanel, ResearchPanel, WarpPanel,
                                  FleetPanel, GoalsPanel, ShopPanel), SkillNodeCard, ListRow réutilisable, Art (emplacements d'images), effets
   Editor/ProjectSetup.cs       ← configuration Android en un clic
-  Tests/EditMode/              ← 35 tests (Window → General → Test Runner)
+  Tests/EditMode/              ← 37 tests (Window → General → Test Runner)
 ```
 
 **Points clés :**

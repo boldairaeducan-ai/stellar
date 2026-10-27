@@ -23,5 +23,6 @@ namespace StellarIdle.Core
         public const string Boost = "boost";
         public const string BonusDrop = "bonus_drop";
         public const string ExpeditionSpeedUp = "expedition_speedup";
+        public const string DistressSignal = "distress_signal";
     }
 }
