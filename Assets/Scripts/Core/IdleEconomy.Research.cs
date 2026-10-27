@@ -79,7 +79,7 @@ namespace StellarIdle.Core
         public bool IsResearchUnlocked(ResearchItem item) => item.Generator < 0 || Owned(item.Generator) >= item.UnlockOwned;
 
         public bool CanResearch(ResearchItem item) =>
-            !IsResearched(item) && IsResearchUnlocked(item) && State.credits >= item.Cost;
+            !ResearchDisabled && !IsResearched(item) && IsResearchUnlocked(item) && State.credits >= item.Cost;
 
         public bool TryResearch(ResearchItem item)
         {

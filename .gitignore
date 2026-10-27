@@ -35,3 +35,6 @@ Thumbs.db
 *.jks
 crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# Balance simulator project (kept)
+!Tools/**/*.csproj

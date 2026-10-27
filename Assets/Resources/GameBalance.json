@@ -7,8 +7,8 @@
     "offlineMaxHours": 4,
     "vipOfflineMaxHours": 12,
     "minOfflineSeconds": 60,
-    "prestigeDivisor": 1000000,
-    "prestigeBonusPerPoint": 0.02,
+    "prestigeDivisor": 1000000000,
+    "prestigeBonusPerPoint": 0.01,
     "boostMultiplier": 2,
     "boostDurationSeconds": 14400,
     "boostMaxSeconds": 43200,
@@ -28,67 +28,103 @@
     "starterPackBoostHours": 8,
     "researchMultiplier": 3,
     "researchTiers": [
-        { "unlockOwned": 10,  "costFactor": 50 },
-        { "unlockOwned": 25,  "costFactor": 2000 },
-        { "unlockOwned": 50,  "costFactor": 100000 },
-        { "unlockOwned": 100, "costFactor": 100000000 },
-        { "unlockOwned": 200, "costFactor": 10000000000000 }
+        {"unlockOwned": 10, "costFactor": 50},
+        {"unlockOwned": 25, "costFactor": 2000},
+        {"unlockOwned": 50, "costFactor": 100000},
+        {"unlockOwned": 100, "costFactor": 100000000},
+        {"unlockOwned": 200, "costFactor": 10000000000000}
     ],
     "globalResearch": [
-        { "cost": 100000,            "multiplier": 2 },
-        { "cost": 100000000,         "multiplier": 2 },
-        { "cost": 100000000000,      "multiplier": 2 },
-        { "cost": 100000000000000,   "multiplier": 2 },
-        { "cost": 100000000000000000, "multiplier": 2 }
+        {"cost": 100000, "multiplier": 2},
+        {"cost": 100000000, "multiplier": 2},
+        {"cost": 100000000000, "multiplier": 2},
+        {"cost": 100000000000000, "multiplier": 2},
+        {"cost": 100000000000000000, "multiplier": 2}
     ],
     "respecCrystalCost": 50,
     "skillTiers": [
         {
-            "name": "Ignition", "unlockDarkMatter": 0, "baseCost": 1, "costGrowth": 1.6,
+            "name": "Ignition",
+            "unlockDarkMatter": 0,
+            "baseCost": 1,
+            "costGrowth": 2,
+            "requiresGenesis": false,
             "nodes": [
-                {"id": "engines", "name": "Stellar Engines", "branch": "industry", "effect": "production", "value": 0.3, "maxLevel": 5},
-                {"id": "fingers", "name": "Quantum Fingers", "branch": "command", "effect": "tap", "value": 0.03, "maxLevel": 5},
-                {"id": "cryo", "name": "Cryo Vaults", "branch": "logistics", "effect": "offlineHours", "value": 2, "maxLevel": 5}
+                {"id": "engines", "name": "Stellar Engines", "branch": "industry", "effect": "production", "value": 0.25, "maxLevel": 5},
+                {"id": "fingers", "name": "Quantum Fingers", "branch": "command", "effect": "tap", "value": 0.05, "maxLevel": 5},
+                {"id": "cryo", "name": "Cryo Vaults", "branch": "logistics", "effect": "offlineHours", "value": 3, "maxLevel": 5}
             ]
         },
         {
-            "name": "Expansion", "unlockDarkMatter": 8, "baseCost": 3, "costGrowth": 1.6,
+            "name": "Expansion",
+            "unlockDarkMatter": 15,
+            "baseCost": 5,
+            "costGrowth": 2,
+            "requiresGenesis": false,
             "nodes": [
-                {"id": "logistics", "name": "Orbital Logistics", "branch": "industry", "effect": "cost", "value": 0.06, "maxLevel": 5},
-                {"id": "overdrive", "name": "Overdrive Reactor", "branch": "command", "effect": "boostHours", "value": 1, "maxLevel": 5},
+                {"id": "logistics", "name": "Orbital Logistics", "branch": "industry", "effect": "cost", "value": 0.05, "maxLevel": 5},
+                {"id": "dronetaps", "name": "Tap Drones", "branch": "command", "effect": "autoTap", "value": 1, "maxLevel": 5},
                 {"id": "headstart", "name": "Head Start", "branch": "logistics", "effect": "startCredits", "value": 1000, "maxLevel": 5}
             ]
         },
         {
-            "name": "Mastery", "unlockDarkMatter": 30, "baseCost": 10, "costGrowth": 1.6,
+            "name": "Mastery",
+            "unlockDarkMatter": 80,
+            "baseCost": 25,
+            "costGrowth": 2,
+            "requiresGenesis": false,
             "nodes": [
-                {"id": "deepresearch", "name": "Deep Research", "branch": "industry", "effect": "research", "value": 0.1, "maxLevel": 5},
-                {"id": "salvage", "name": "Salvage Crews", "branch": "command", "effect": "bonusDrop", "value": 0.5, "maxLevel": 5},
+                {"id": "deepresearch", "name": "Deep Research", "branch": "industry", "effect": "research", "value": 0.2, "maxLevel": 5},
+                {"id": "overclock", "name": "Overclocked Taps", "branch": "command", "effect": "tapMult", "value": 0.5, "maxLevel": 5},
                 {"id": "dilation", "name": "Time Dilation", "branch": "logistics", "effect": "offlineEfficiency", "value": 0.1, "maxLevel": 5}
             ]
         },
         {
-            "name": "Dominion", "unlockDarkMatter": 100, "baseCost": 30, "costGrowth": 1.6,
+            "name": "Dominion",
+            "unlockDarkMatter": 400,
+            "baseCost": 125,
+            "costGrowth": 2,
+            "requiresGenesis": false,
             "nodes": [
-                {"id": "megastructures", "name": "Megastructures", "branch": "industry", "effect": "productionMult", "value": 0.5, "maxLevel": 5},
-                {"id": "hyperdrive", "name": "Hyperdrive", "branch": "command", "effect": "boostMultiplier", "value": 0.1, "maxLevel": 5},
-                {"id": "darkharvest", "name": "Dark Harvest", "branch": "logistics", "effect": "darkMatterGain", "value": 0.2, "maxLevel": 5}
+                {"id": "megastructures", "name": "Megastructures", "branch": "industry", "effect": "productionMult", "value": 0.25, "maxLevel": 5},
+                {"id": "swarm", "name": "Swarm Control", "branch": "command", "effect": "autoTap", "value": 3, "maxLevel": 5},
+                {"id": "darkharvest", "name": "Dark Harvest", "branch": "logistics", "effect": "darkMatterGain", "value": 0.15, "maxLevel": 5}
             ]
         },
         {
-            "name": "Singularity", "unlockDarkMatter": 350, "baseCost": 100, "costGrowth": 1.6,
+            "name": "Singularity",
+            "unlockDarkMatter": 2000,
+            "baseCost": 600,
+            "costGrowth": 2,
+            "requiresGenesis": false,
             "nodes": [
                 {"id": "resonance", "name": "Resonance", "branch": "industry", "effect": "milestone", "value": 0.04, "maxLevel": 5},
-                {"id": "tractor", "name": "Tractor Beams", "branch": "command", "effect": "bonusDropRate", "value": 0.1, "maxLevel": 5},
-                {"id": "memory", "name": "Ancestral Memory", "branch": "logistics", "effect": "prestigeBonus", "value": 0.002, "maxLevel": 5}
+                {"id": "criticalmass", "name": "Critical Mass", "branch": "command", "effect": "tapMult", "value": 1.0, "maxLevel": 5},
+                {"id": "memory", "name": "Ancestral Memory", "branch": "logistics", "effect": "prestigeBonus", "value": 0.003, "maxLevel": 5}
             ]
         },
         {
-            "name": "Transcendence", "unlockDarkMatter": 1200, "baseCost": 300, "costGrowth": 1.6,
+            "name": "Transcendence",
+            "unlockDarkMatter": 10000,
+            "baseCost": 3000,
+            "costGrowth": 2,
+            "requiresGenesis": false,
             "nodes": [
-                {"id": "galacticengine", "name": "Galactic Engine", "branch": "industry", "effect": "productionMult", "value": 1.0, "maxLevel": 5},
-                {"id": "supernova", "name": "Supernova Taps", "branch": "command", "effect": "tapMult", "value": 1.0, "maxLevel": 5},
-                {"id": "eternity", "name": "Eternal Harvest", "branch": "logistics", "effect": "darkMatterGain", "value": 0.5, "maxLevel": 5}
+                {"id": "galacticengine", "name": "Galactic Engine", "branch": "industry", "effect": "productionMult", "value": 0.5, "maxLevel": 5},
+                {"id": "supernova", "name": "Supernova Taps", "branch": "command", "effect": "tap", "value": 0.1, "maxLevel": 5},
+                {"id": "eternity", "name": "Eternal Harvest", "branch": "logistics", "effect": "darkMatterGain", "value": 0.2, "maxLevel": 5}
+            ]
+        },
+        {
+            "name": "Genesis",
+            "unlockDarkMatter": 20000,
+            "baseCost": 15000,
+            "costGrowth": 2,
+            "requiresGenesis": true,
+            "nodes": [
+                {"id": "omegaforge", "name": "Omega Forge", "branch": "industry", "effect": "productionMult", "value": 1.0, "maxLevel": 5},
+                {"id": "hivemind", "name": "Hive Mind", "branch": "command", "effect": "autoTap", "value": 10, "maxLevel": 5},
+                {"id": "siphon", "name": "Horizon Siphon", "branch": "logistics", "effect": "darkMatterGain", "value": 0.5, "maxLevel": 5}
             ]
         }
     ],
@@ -148,15 +184,39 @@
         {"id": "deepspace", "name": "Deep Space Run", "minutes": 480, "rolls": 4, "crystals": 10, "productionMinutes": 90}
     ],
     "generators": [
-        { "id": "drone",     "name": "Mining Drone",        "baseCost": 15,           "costGrowth": 1.15, "baseProduction": 0.5 },
-        { "id": "harvester", "name": "Asteroid Harvester",  "baseCost": 120,          "costGrowth": 1.15, "baseProduction": 4 },
-        { "id": "lunar",     "name": "Lunar Base",          "baseCost": 1300,         "costGrowth": 1.15, "baseProduction": 30 },
-        { "id": "station",   "name": "Orbital Station",     "baseCost": 14000,        "costGrowth": 1.15, "baseProduction": 220 },
-        { "id": "mars",      "name": "Mars Colony",         "baseCost": 160000,       "costGrowth": 1.15, "baseProduction": 1600 },
-        { "id": "refinery",  "name": "Gas Giant Refinery",  "baseCost": 1800000,      "costGrowth": 1.15, "baseProduction": 12000 },
-        { "id": "dyson",     "name": "Dyson Swarm",         "baseCost": 22000000,     "costGrowth": 1.15, "baseProduction": 90000 },
-        { "id": "wormhole",  "name": "Wormhole Gate",       "baseCost": 260000000,    "costGrowth": 1.15, "baseProduction": 700000 },
-        { "id": "forge",     "name": "Star Forge",          "baseCost": 3200000000,   "costGrowth": 1.15, "baseProduction": 5500000 },
-        { "id": "core",      "name": "Galactic Core",       "baseCost": 40000000000,  "costGrowth": 1.15, "baseProduction": 45000000 }
+        {"id": "drone", "name": "Mining Drone", "baseCost": 15, "costGrowth": 1.15, "baseProduction": 0.5},
+        {"id": "harvester", "name": "Asteroid Harvester", "baseCost": 120, "costGrowth": 1.15, "baseProduction": 4},
+        {"id": "lunar", "name": "Lunar Base", "baseCost": 1300, "costGrowth": 1.15, "baseProduction": 30},
+        {"id": "station", "name": "Orbital Station", "baseCost": 14000, "costGrowth": 1.15, "baseProduction": 220},
+        {"id": "mars", "name": "Mars Colony", "baseCost": 160000, "costGrowth": 1.15, "baseProduction": 1600},
+        {"id": "refinery", "name": "Gas Giant Refinery", "baseCost": 1800000, "costGrowth": 1.15, "baseProduction": 12000},
+        {"id": "dyson", "name": "Dyson Swarm", "baseCost": 22000000, "costGrowth": 1.15, "baseProduction": 90000},
+        {"id": "wormhole", "name": "Wormhole Gate", "baseCost": 260000000, "costGrowth": 1.15, "baseProduction": 700000},
+        {"id": "forge", "name": "Star Forge", "baseCost": 3200000000, "costGrowth": 1.15, "baseProduction": 5500000},
+        {"id": "core", "name": "Galactic Core", "baseCost": 40000000000, "costGrowth": 1.15, "baseProduction": 45000000}
+    ],
+    "prestigeExponent": 0.2,
+    "prestigeScale": 1,
+    "galaxies": [
+        {"id": "milkyway", "name": "Milky Way", "unlockWarps": 0, "darkMatterMultiplier": 1},
+        {"id": "silence", "name": "Silent Nebula", "unlockWarps": 3, "darkMatterMultiplier": 1.5, "noTap": true, "relicName": "Echo Chamber", "relicEffect": "autoTap", "relicValue": 2, "relicThresholds": [1e12, 1e18, 1e24]},
+        {"id": "iron", "name": "Iron Belt", "unlockWarps": 6, "darkMatterMultiplier": 2, "costMultiplier": 10, "relicName": "Iron Ledger", "relicEffect": "cost", "relicValue": 0.05, "relicThresholds": [1e12, 1e18, 1e24]},
+        {"id": "dim", "name": "Dim Sector", "unlockWarps": 10, "darkMatterMultiplier": 2.5, "productionMultiplier": 0.2, "relicName": "Dim Lantern", "relicEffect": "productionMult", "relicValue": 0.25, "relicThresholds": [1e11, 1e16, 1e21]},
+        {"id": "lonely", "name": "Lonely Reach", "unlockWarps": 15, "darkMatterMultiplier": 2, "maxGenerators": 5, "relicName": "Lone Star", "relicEffect": "milestone", "relicValue": 0.05, "relicThresholds": [1e10, 1e14, 1e18]},
+        {"id": "storm", "name": "Ion Storm", "unlockWarps": 20, "darkMatterMultiplier": 3, "noResearch": true, "relicName": "Storm Codex", "relicEffect": "research", "relicValue": 0.25, "relicThresholds": [1e10, 1e14, 1e18]},
+        {"id": "frozen", "name": "Frozen Void", "unlockWarps": 25, "darkMatterMultiplier": 2, "noOffline": true, "productionMultiplier": 0.5, "relicName": "Frozen Heart", "relicEffect": "darkMatterGain", "relicValue": 0.1, "relicThresholds": [1e11, 1e16, 1e21]}
+    ],
+    "crunchRequirement": 5000,
+    "crunchScale": 3,
+    "crunchRequirementGrowth": 2.5,
+    "crunchExponent": 0.5,
+    "singularityBonus": 0.1,
+    "cosmicUpgrades": [
+        {"id": "forge", "name": "Stellar Forge", "effect": "productionMult", "value": 1.0, "baseCost": 1, "costGrowth": 2, "maxLevel": 10},
+        {"id": "horizon", "name": "Event Horizon", "effect": "darkMatterGain", "value": 0.25, "baseCost": 1, "costGrowth": 1.5, "maxLevel": 10},
+        {"id": "automation", "name": "Automation Core", "effect": "autoBuy", "value": 1, "baseCost": 2, "costGrowth": 1, "maxLevel": 1},
+        {"id": "memory", "name": "Primordial Memory", "effect": "startDarkMatter", "value": 15, "baseCost": 2, "costGrowth": 2, "maxLevel": 3},
+        {"id": "expanded", "name": "Expanded Mind", "effect": "treeMaxLevel", "value": 1, "baseCost": 3, "costGrowth": 3, "maxLevel": 3},
+        {"id": "genesis", "name": "Genesis", "effect": "genesisTier", "value": 1, "baseCost": 5, "costGrowth": 1, "maxLevel": 1}
     ]
 }

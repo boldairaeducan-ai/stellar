@@ -46,6 +46,25 @@ namespace StellarIdle.Tests
                 new ExpeditionDef { id = "sweep", minutes = 30, rolls = 1, crystals = 2, productionMinutes = 10 },
             },
             starterShip = "miner_b",
+            galaxies = new[]
+            {
+                new GalaxyDef { id = "home", name = "Home" },
+                new GalaxyDef
+                {
+                    id = "hard", name = "Hard", unlockWarps = 1, darkMatterMultiplier = 2, costMultiplier = 10,
+                    noTap = true, relicEffect = SkillEffect.Production, relicValue = 0.5, relicThresholds = new[] { 1e6, 1e9 },
+                },
+            },
+            crunchRequirement = 100,
+            crunchScale = 2,
+            crunchRequirementGrowth = 2,
+            singularityBonus = 0.1,
+            cosmicUpgrades = new[]
+            {
+                new CosmicUpgradeDef { id = "auto", effect = SkillEffect.AutoBuy, value = 1, baseCost = 1, maxLevel = 1 },
+                new CosmicUpgradeDef { id = "mind", effect = SkillEffect.TreeMaxLevel, value = 1, baseCost = 1, costGrowth = 2, maxLevel = 2 },
+                new CosmicUpgradeDef { id = "memory", effect = SkillEffect.StartDarkMatter, value = 50, baseCost = 1, maxLevel = 3 },
+            },
             distressSignalRolls = 2,
             distressStreakDays = new[] { 3 },
             achievementShipsBuiltThresholds = new[] { 1, 2 },
@@ -484,6 +503,125 @@ namespace StellarIdle.Tests
             while (eco.TryUpgradeShip(cruiser)) { }
             Assert.AreEqual(IdleEconomy.MaxStars, eco.Stars(cruiser));
             Assert.IsTrue(eco.CanClaimAchievement(maxed));
+        }
+
+        [Test]
+        public void DarkMatter_FollowsPowerCurve()
+        {
+            var b = Balance();
+            b.prestigeExponent = 0.2;
+            var eco = new IdleEconomy(b, GameState.CreateNew(Now));
+            eco.Earn(1e6 * 1e10); // (1e10)^0.2 = 100
+            Assert.AreEqual(100, eco.PendingDarkMatter, 1e-9);
+            Assert.AreEqual(1e6, new IdleEconomy(b, GameState.CreateNew(Now)).PrestigeRequirement, 1e-3);
+        }
+
+        [Test]
+        public void Galaxy_ModifiersApplyAndRelicIsAwardedOnLeaving()
+        {
+            var eco = NewEconomy();
+            eco.Earn(1e6);
+            eco.Prestige("hard"); // locked before the first warp: stays home
+            Assert.AreEqual("home", eco.CurrentGalaxy.id);
+            Assert.IsTrue(eco.IsGalaxyUnlocked(eco.FindGalaxy("hard")));
+
+            double homeCost = eco.CostOf(0, 1);
+            eco.Earn(1e6);
+            eco.Prestige("hard");
+            Assert.AreEqual("hard", eco.CurrentGalaxy.id);
+            Assert.AreEqual(homeCost * 10, eco.CostOf(0, 1), 1e-9);
+            Assert.AreEqual(0, eco.TapValue(Now));
+            Assert.GreaterOrEqual(eco.State.credits, eco.CostOf(0, 1)); // no taps: first building is affordable
+
+            eco.Earn(1e9); // both relic thresholds, x2 Dark Matter here
+            Assert.AreEqual(2 * System.Math.Floor(System.Math.Sqrt(1e9 / 1e6) * 1000) / 1000, eco.PendingDarkMatter, 1);
+            eco.Prestige("home");
+            var hard = eco.FindGalaxy("hard");
+            Assert.AreEqual(2, eco.RelicLevel(hard));
+            Assert.AreEqual(hard, eco.LastRelicGalaxy);
+            Assert.AreEqual(2, eco.TreeProductionMultiplier, 1e-9); // relic: +50% x 2 levels
+        }
+
+        [Test]
+        public void Crunch_ResetsCycleAndPaysSingularities()
+        {
+            var eco = NewEconomy();
+            eco.State.darkMatterEarned = 99;
+            Assert.IsFalse(eco.CanCrunch);
+            eco.State.darkMatterEarned = 400; // 2 x sqrt(400 / 100) = 4
+            eco.State.darkMatter = 50;
+            eco.TryBuySkill(0, eco.SkillTiers[0].nodes[0]);
+            eco.State.prestigeCount = 3;
+            eco.TryBuy(0, 1);
+
+            Assert.AreEqual(4, eco.Crunch());
+            Assert.AreEqual(4, eco.State.singularities);
+            Assert.AreEqual(1.4, eco.SingularityMultiplier, 1e-9);
+            Assert.AreEqual(0, eco.State.darkMatterEarned);
+            Assert.AreEqual(0, eco.State.skillNodes.Count);
+            Assert.AreEqual(0, eco.Owned(0));
+            Assert.AreEqual(3, eco.State.prestigeCount); // lifetime warps kept (galaxies, fleet slots)
+            Assert.AreEqual(200, eco.CrunchRequirement, 1e-9); // grows after each crunch
+        }
+
+        [Test]
+        public void Cosmic_StartingDarkMatterDoesNotCountForTheNextCrunch()
+        {
+            var eco = NewEconomy();
+            eco.State.singularities = 10;
+            var memory = eco.CosmicUpgrades[2];
+            eco.TryBuyCosmic(memory);
+            eco.TryBuyCosmic(memory);
+            eco.TryBuyCosmic(memory); // 50 x 10^2 = 5000 starting Dark Matter
+            eco.State.darkMatterEarned = 100;
+            eco.Crunch();
+            Assert.AreEqual(5000, eco.State.darkMatterEarned, 1e-9);
+            Assert.AreEqual(0, eco.CycleDarkMatter, 1e-9);
+            Assert.IsFalse(eco.CanCrunch);
+        }
+
+        [Test]
+        public void Cosmic_TreeMaxLevelAndAutoBuy()
+        {
+            var eco = NewEconomy(1e6);
+            eco.State.singularities = 10;
+            var node = eco.SkillTiers[0].nodes[1]; // max level 2
+            Assert.AreEqual(2, eco.SkillMaxLevel(node));
+            eco.TryBuyCosmic(eco.CosmicUpgrades[1]);
+            Assert.AreEqual(3, eco.SkillMaxLevel(node));
+
+            Assert.IsFalse(eco.AutoBuy());
+            eco.TryBuyCosmic(eco.CosmicUpgrades[0]);
+            Assert.IsTrue(eco.AutoBuy());
+            Assert.Greater(eco.Owned(0), 0);
+            eco.State.autoBuyEnabled = false;
+            Assert.IsFalse(eco.AutoBuy());
+        }
+
+        [Test]
+        public void AutoTaps_AddIncome()
+        {
+            var b = Balance();
+            b.skillTiers[0].nodes[1] = new SkillNodeDef { id = "drones", effect = SkillEffect.AutoTap, value = 2, maxLevel = 5 };
+            var eco = new IdleEconomy(b, GameState.CreateNew(Now));
+            eco.State.darkMatter = 10;
+            eco.TryBuySkill(0, b.skillTiers[0].nodes[1]);
+            Assert.AreEqual(2, eco.AutoTapsPerSecond, 1e-9);
+            Assert.AreEqual(eco.ProductionPerSecond(Now) + 2 * eco.TapValue(Now), eco.IncomePerSecond(Now), 1e-9);
+        }
+
+        [Test]
+        public void Migration_V4DarkMatterIsScaledDown()
+        {
+            var state = GameState.CreateNew(Now);
+            state.version = 4;
+            state.darkMatterEarned = 5000;
+            state.darkMatter = 300;
+            state.skillNodes.Add(new UpgradeLevel { id = "engines", level = 4 });
+            var eco = new IdleEconomy(Balance(), state);
+            Assert.AreEqual(20, eco.State.darkMatterEarned, 1e-9);
+            Assert.AreEqual(20, eco.State.darkMatter, 1e-9);
+            Assert.AreEqual(0, eco.State.skillNodes.Count);
         }
 
         static AchievementDef FindAchievementById(IdleEconomy eco, string id)

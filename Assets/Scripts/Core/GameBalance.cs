@@ -52,6 +52,7 @@ namespace StellarIdle.Core
         public double unlockDarkMatter;
         public double baseCost = 1;
         public double costGrowth = 1.6;
+        public bool requiresGenesis; // hidden until the "Genesis" cosmic upgrade is bought
         public SkillNodeDef[] nodes = Array.Empty<SkillNodeDef>();
     }
 
@@ -80,6 +81,13 @@ namespace StellarIdle.Core
         public const string Milestone = "milestone";                 // milestone multiplier +value x level
         public const string DarkMatterGain = "darkMatterGain";       // Dark Matter from warps +value x level
         public const string PrestigeBonus = "prestigeBonus";         // passive bonus per Dark Matter +value x level
+        public const string AutoTap = "autoTap";                     // +value x level automatic taps per second
+
+        // Cosmic upgrades only (Big Crunch)
+        public const string TreeMaxLevel = "treeMaxLevel";           // +value x level max level of every tree node
+        public const string GenesisTier = "genesisTier";             // unlocks the tree tiers marked requiresGenesis
+        public const string AutoBuy = "autoBuy";                     // buys buildings automatically
+        public const string StartDarkMatter = "startDarkMatter";     // value x 10^(level-1) Dark Matter after each crunch
     }
 
     /// <summary>Ship rarity: drop weight, shards to build the ship and to reach each extra star.</summary>
@@ -128,6 +136,42 @@ namespace StellarIdle.Core
     }
 
     /// <summary>
+    /// Destination chosen at each warp. Modifiers make the run harder and pay more Dark Matter;
+    /// reaching the relic thresholds in a galaxy grants (or levels up) its permanent relic.
+    /// </summary>
+    [Serializable]
+    public class GalaxyDef
+    {
+        public string id;
+        public string name;
+        public int unlockWarps;               // lifetime warps needed to travel there
+        public double darkMatterMultiplier = 1;
+        public double costMultiplier = 1;
+        public double productionMultiplier = 1;
+        public int maxGenerators;             // 0 = all buildings
+        public bool noTap;
+        public bool noResearch;
+        public bool noOffline;
+        public string relicName;
+        public string relicEffect;            // a SkillEffect, applied value x relic level
+        public double relicValue;
+        public double[] relicThresholds = Array.Empty<double>(); // credits earned in one run there, per relic level
+    }
+
+    /// <summary>Permanent upgrade bought with Singularities (Big Crunch currency).</summary>
+    [Serializable]
+    public class CosmicUpgradeDef
+    {
+        public string id;
+        public string name;
+        public string effect; // a SkillEffect
+        public double value;
+        public double baseCost = 1;
+        public double costGrowth = 2;
+        public int maxLevel = 1;
+    }
+
+    /// <summary>
     /// Every tunable number of the game lives here so balancing never requires a code change
     /// (and can later be driven by Remote Config).
     /// </summary>
@@ -148,8 +192,10 @@ namespace StellarIdle.Core
         public double vipOfflineMaxHours = 12;
         public double minOfflineSeconds = 60;
 
-        // Prestige ("Dark Matter")
+        // Prestige ("Dark Matter"): scale x (run earnings / divisor)^exponent
         public double prestigeDivisor = 1e6;
+        public double prestigeExponent = 0.5;
+        public double prestigeScale = 1;
         public double prestigeBonusPerPoint = 0.02;
 
         // Rewarded-ad boost
@@ -202,6 +248,17 @@ namespace StellarIdle.Core
         public int[] achievementShipsMaxedThresholds = Array.Empty<int>();
         public long[] achievementShipsMaxedRewards = Array.Empty<long>();
 
+        // Galaxies and relics
+        public GalaxyDef[] galaxies = Array.Empty<GalaxyDef>();
+
+        // Big Crunch (second prestige): Singularities = scale x (Dark Matter earned this cycle / requirement)^exponent
+        public double crunchRequirement = 10000;
+        public double crunchExponent = 0.5;
+        public double crunchScale = 1;
+        public double crunchRequirementGrowth = 1; // the requirement is multiplied by this after each crunch
+        public double singularityBonus = 0.25; // +25% production per Singularity ever earned
+        public CosmicUpgradeDef[] cosmicUpgrades = Array.Empty<CosmicUpgradeDef>();
+
         // Ships, fleet and expeditions
         public ShipRarityDef[] shipRarities = Array.Empty<ShipRarityDef>();
         public ShipDef[] ships = Array.Empty<ShipDef>();
@@ -230,6 +287,9 @@ namespace StellarIdle.Core
             researchTiers ??= Array.Empty<ResearchTierDef>();
             globalResearch ??= Array.Empty<GlobalResearchDef>();
             skillTiers ??= Array.Empty<SkillTierDef>();
+            galaxies ??= Array.Empty<GalaxyDef>();
+            foreach (var galaxy in galaxies) galaxy.relicThresholds ??= Array.Empty<double>();
+            cosmicUpgrades ??= Array.Empty<CosmicUpgradeDef>();
             shipRarities ??= Array.Empty<ShipRarityDef>();
             ships ??= Array.Empty<ShipDef>();
             expeditions ??= Array.Empty<ExpeditionDef>();

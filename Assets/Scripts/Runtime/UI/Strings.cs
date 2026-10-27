@@ -23,7 +23,6 @@ namespace StellarIdle.UI
         public const string BoostFull = "Boost is already at maximum.";
         public const string BoostAdded = "x2 boost activated!";
 
-        public const string PrestigeTitle = "Warp to a new galaxy";
         public const string PrestigeConfirm = "Warp!";
         public const string PrestigeDone = "+{0} Dark Matter";
 
@@ -86,7 +85,6 @@ namespace StellarIdle.UI
         public const string WarpReady = "Warp now for <color=#FFC440>+{0} Dark Matter</color>\nBonus x{1} -> x{2}";
         public const string WarpNotReady = "Earn {0} credits in this galaxy to warp.";
         public const string WarpButton = "WARP";
-        public const string WarpConfirmBody = "Your credits, buildings and research reset.\nYou keep Dark Matter, its upgrades, crystals and purchases.\n\nGain {0} Dark Matter?";
         public const string BranchIndustry = "Industry";
         public const string BranchCommand = "Command";
         public const string BranchLogistics = "Logistics";
@@ -121,6 +119,53 @@ namespace StellarIdle.UI
         public const string FxMilestone = "+x{0} per building bonus";
         public const string FxDarkMatterGain = "+{0}% Dark Matter from warps";
         public const string FxPrestigeBonus = "+{0}% bonus per Dark Matter";
+        public const string FxAutoTap = "+{0} automatic taps/s";
+        public const string FxTreeMaxLevel = "+{0} max level on every tree node";
+        public const string FxGenesis = "Unlocks the Genesis tier of the tree";
+        public const string FxAutoBuy = "Buys buildings automatically";
+        public const string FxStartDarkMatter = "Start each cycle with {0} Dark Matter";
+
+        // Warp sub-sections
+        public const string SectionTree = "Skill tree";
+        public const string SectionGalaxies = "Galaxies";
+        public const string SectionCrunch = "Big Crunch";
+        public const string CurrentGalaxy = "Current galaxy: <b>{0}</b>";
+        public const string ChooseGalaxy = "Choose your destination";
+        public const string ChooseGalaxyBody = "Credits, buildings and research reset. You keep Dark Matter, the tree, ships, relics, crystals and purchases.\n+{0} Dark Matter (x galaxy bonus applies to the next warp).";
+        public const string GalaxyChoice = "{0}  <color=#FFC440>x{1} DM</color>\n<size=24>{2}</size>";
+        public const string GalaxyLocked = "Unlocks after {0} warps";
+        public const string GalaxyHere = "You are here";
+        public const string GalaxyNoModifier = "No modifier";
+        public const string ModNoTap = "No taps";
+        public const string ModCost = "Buildings x{0} cost";
+        public const string ModProduction = "Production x{0}";
+        public const string ModMaxGenerators = "Only {0} building types";
+        public const string ModNoResearch = "No research";
+        public const string ModNoOffline = "No offline earnings";
+        public const string RelicLine = "Relic <color=#FFC440>{0}</color> Lv {1}/{2}: {3}";
+        public const string RelicNext = "Next level: earn {0} in one run here";
+        public const string RelicMaxed = "Relic fully upgraded";
+        public const string RelicGained = "Relic {0} reached level {1}!";
+        public const string WarpReportTitle = "Warp complete";
+        public const string TapsDisabled = "Taps don't work in this galaxy.";
+        public const string ResearchDisabled = "Research is disabled in {0}.";
+        public const string GalaxyBuildingsLimit = "{0}: only {1} building types here.";
+
+        // Big Crunch
+        public const string CrunchHeader = "Singularities: {0}";
+        public const string CrunchBonus = "Production x{0}  (+{1}% per Singularity ever earned)";
+        public const string CrunchReady = "Big Crunch now for <color=#FFC440>+{0} Singularities</color>";
+        public const string CrunchNotReady = "Earn {0} Dark Matter this cycle to collapse the universe.\nProgress: {1}";
+        public const string CrunchButton = "BIG CRUNCH";
+        public const string CrunchConfirmBody = "Resets Dark Matter, the skill tree, credits, buildings and research.\nYou keep Singularities, cosmic upgrades, ships, relics, galaxies, crystals and purchases.\n\nGain {0} Singularities?";
+        public const string CrunchDone = "+{0} Singularities";
+        public const string CosmicCostLabel = "{0} Sg";
+        public const string CosmicLevel = "Lv {0}/{1}";
+
+        // Automation
+        public const string AutoBuyTitle = "Automation Core";
+        public const string AutoBuyOn = "Buying buildings automatically";
+        public const string AutoBuyOff = "Paused";
 
         // Fleet
         public const string TabFleet = "Fleet";
@@ -167,7 +212,6 @@ namespace StellarIdle.UI
         public const string DistressAnswerVip = "Answer\n(VIP)";
         public const string DistressTomorrow = "Tomorrow";
         public const string DistressResultTitle = "Survivors rescued!";
-        public const string WarpChestTitle = "Warp chest";
         public const string ShardsFound = "Shards: {0}";
         public const string RoleMiner = "+{0}% {1} production";
         public const string RoleCruiser = "+{0}% tap power";

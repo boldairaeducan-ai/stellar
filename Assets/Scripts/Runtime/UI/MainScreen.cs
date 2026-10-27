@@ -192,6 +192,7 @@ namespace StellarIdle.UI
             creditsPunch = creditsText.gameObject.AddComponent<PunchScale>();
 
             rateText = UIFactory.Text("Rate", bar, "", 38, Theme.TextDim);
+            rateText.supportRichText = true;
             rateText.rectTransform.Anchor(new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -235), new Vector2(0, -180));
         }
 
@@ -273,7 +274,9 @@ namespace StellarIdle.UI
             var eco = Eco;
             var state = eco.State;
 
-            rateText.text = $"+{NumberFormat.Format(eco.ProductionPerSecond(now))}{Strings.PerSecond}";
+            var galaxy = eco.CurrentGalaxy;
+            string galaxyName = galaxy != null && galaxy != eco.Galaxies[0] ? $"   <color=#468CF0>{galaxy.name}</color>" : "";
+            rateText.text = $"+{NumberFormat.Format(eco.IncomePerSecond(now))}{Strings.PerSecond}{galaxyName}";
             crystalsText.text = $"{Strings.Crystals}: {state.crystals}";
             darkMatterText.text = state.darkMatterEarned > 0 ? $"{Strings.DarkMatter}: {NumberFormat.Format(state.darkMatter)}" : "";
 
@@ -309,6 +312,11 @@ namespace StellarIdle.UI
 
         void OnPlanetTapped(PointerEventData eventData)
         {
+            if (Eco.TapsDisabled)
+            {
+                if (toastTimer <= 0) Toast(Strings.TapsDisabled);
+                return;
+            }
             double value = Eco.Tap(Clock.Now);
             planetScale = 0.92f;
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(floatLayer, eventData.position, eventData.pressEventCamera, out var local))

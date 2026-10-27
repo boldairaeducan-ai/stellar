@@ -12,10 +12,11 @@ namespace StellarIdle.UI
 
         readonly ListRow[] rows;
         readonly Text emptyText;
+        readonly Text header;
 
         public ResearchPanel(UIContext ctx, Transform parent) : base(ctx, parent, "Research")
         {
-            AddHeader(Strings.ResearchHeader);
+            header = AddHeader(Strings.ResearchHeader);
             var items = Eco.ResearchItems; // sorted by cost
             rows = new ListRow[items.Count];
             for (int i = 0; i < rows.Length; i++)
@@ -33,6 +34,9 @@ namespace StellarIdle.UI
             var eco = Eco;
             var items = eco.ResearchItems;
             int shown = 0;
+            header.text = eco.ResearchDisabled
+                ? $"<color=#EB4646>{string.Format(Strings.ResearchDisabled, eco.CurrentGalaxy.name)}</color>"
+                : Strings.ResearchHeader;
             for (int i = 0; i < rows.Length; i++)
             {
                 var item = items[i];

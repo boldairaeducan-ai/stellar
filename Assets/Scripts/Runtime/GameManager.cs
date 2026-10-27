@@ -32,7 +32,7 @@ namespace StellarIdle
         public event Action<string> ProductDelivered;
 
         SaveService save;
-        float autosaveTimer;
+        float autosaveTimer, autoBuyTimer;
 
         void Awake()
         {
@@ -64,6 +64,13 @@ namespace StellarIdle
             // deltaTime is clamped by Time.maximumDeltaTime, so a long pause is never counted twice
             // (time away is handled by the offline earnings).
             Economy.Tick(Time.deltaTime, Clock.Now);
+
+            autoBuyTimer += Time.unscaledDeltaTime;
+            if (autoBuyTimer >= 1f)
+            {
+                autoBuyTimer = 0;
+                Economy.AutoBuy();
+            }
 
             autosaveTimer += Time.unscaledDeltaTime;
             if (autosaveTimer >= AutosaveInterval) Save();
@@ -139,9 +146,17 @@ namespace StellarIdle
 
         // ---------- Prestige ----------
 
-        public double DoPrestige()
+        /// <summary>Warps, travelling to <paramref name="galaxyId"/> for the next run.</summary>
+        public double DoPrestige(string galaxyId)
         {
-            double gain = Economy.Prestige();
+            double gain = Economy.Prestige(galaxyId);
+            Save();
+            return gain;
+        }
+
+        public double DoCrunch()
+        {
+            double gain = Economy.Crunch();
             Save();
             return gain;
         }

@@ -9,7 +9,7 @@ Le joueur tape sur une planète pour gagner des crédits, achète des bâtiments
 |---|---|---|
 | **Build** | Acheter des bâtiments (x1 / x10 / MAX). Production x2 à 10, 25, 50, 100… exemplaires (barre de progression). | Oui |
 | **Research** | Achats uniques en crédits : x3 par bâtiment (à 10/25/50/100/200 exemplaires) et x2 global. Donne une décision toutes les quelques minutes en milieu de partie. | Oui |
-| **Warp** | Prestige : gain de Matière noire = √(crédits gagnés dans la galaxie / 1M). Chaque point **gagné** donne +2 % passif. La Matière noire se **dépense** dans un arbre de 6 paliers × 3 voies (Industrie / Commandement / Logistique) : un seul nœud par palier, paliers débloqués par la Matière noire gagnée au total (0 → 1200), effets de plus en plus forts. Réinitialisation : 1ʳᵉ gratuite, puis 50 cristaux. | Non |
+| **Warp** | **Prestige.** Matière noire = (crédits gagnés / 1 Md)^0,2 × bonus : chaque ordre de grandeur rapporte un peu plus, sans emballement. +1 % de production par Matière noire gagnée. **Arbre** : 6 paliers × 3 voies exclusives (Industrie : production idle ; Commandement : taps et taps automatiques ; Logistique : hors ligne et gain de Matière noire), aucun bonus de pub, coûts x5 par palier, paliers débloqués à 0 / 15 / 80 / 400 / 2 000 / 10 000 Matière noire. **Galaxies** : à chaque Warp on choisit la destination ; 6 galaxies à contraintes (pas de tap, coûts x10, production x0,2, 5 bâtiments, pas de recherche, pas de hors ligne) rapportent x1,5 à x3 Matière noire et une **relique** permanente (3 niveaux) quand on y atteint certains seuils. **Big Crunch** : à 5 000 Matière noire gagnée dans le cycle (x2,5 à chaque fois), on réinitialise Matière noire et arbre contre des **Singularités** (+10 % de production chacune) qui achètent des améliorations cosmiques (production x2, gain de Matière noire, achat automatique, niveau max de l'arbre +1, palier VII « Genesis », Matière noire de départ). | Non |
 | **Fleet** | Collection de 20 vaisseaux (Commun → Légendaire). **Flotte active** : 3 emplacements (4 après 1 Warp, 5 après 5) ; chaque vaisseau équipé donne son bonus (Mineur : un bâtiment, Croiseur : tap, Cargo : capsules, Éclaireur : hors ligne, Amiral : tout, Faucheur : Matière noire). **Expéditions** (30 min / 2 h / 8 h) pour les vaisseaux non équipés : crédits, cristaux et fragments ; une pub divise le temps restant par deux. **Fragments** : construire puis monter jusqu'au niveau 5 (+50 % du bonus par niveau). Sources gratuites uniquement : expéditions, coffre de Warp (3 tirages), capsules cargo (30 %). Un premier vaisseau est offert. **Signal de détresse** quotidien (remise à zéro à minuit, heure locale) : une pub = 2 tirages, +1 tirage avec une série de 3 jours, +2 avec 7 jours. | Non |
 | **Goals** | Succès (bâtiments possédés, crédits gagnés, nombre de Warps, vaisseaux construits, raretés complétées, vaisseaux au niveau max) récompensés en cristaux. | Non |
 | **Shop** | Achats intégrés, Time Warp (cristaux), restauration, confidentialité. | — |
@@ -63,7 +63,7 @@ Assets/
     UI/                        ← MainScreen + un panneau par onglet (BuildingsPanel, ResearchPanel, WarpPanel,
                                  FleetPanel, GoalsPanel, ShopPanel), SkillNodeCard, ListRow réutilisable, Art (emplacements d'images), effets
   Editor/ProjectSetup.cs       ← configuration Android en un clic
-  Tests/EditMode/              ← 37 tests (Window → General → Test Runner)
+  Tests/EditMode/              ← 44 tests (Window → General → Test Runner)
 ```
 
 **Points clés :**
@@ -71,6 +71,8 @@ Assets/
 - Pour **brancher les vrais SDK**, il suffit d'implémenter `IAdsService` et `IStoreService`, puis de les retourner dans `ServiceFactory.cs`. Le reste du jeu ne change pas.
 - Les récompenses IAP sont distribuées uniquement dans `IdleEconomy.GrantProduct`, une fonction idempotente pour les achats non-consommables, ce qui garantit des restaurations d'achats correctes.
 - Le temps hors ligne se base sur l'horloge UTC. Un recul de l'horloge ne rapporte rien et le temps comptabilisé est plafonné, ce qui limite la triche.
+
+**Équilibrage :** `Tools/BalanceSim` simule des semaines de jeu avec les vraies règles et le vrai `GameBalance.json` (voir son README). Repères actuels (2 h de jeu par jour) : palier II jour 1, III jour 4, IV jour 9, premier Big Crunch vers le jour 23-27, puis un tous les 15 jours environ.
 
 ## Prochaines étapes
 

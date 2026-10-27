@@ -50,10 +50,11 @@ namespace StellarIdle.Core
         public int GeneratorCount => Balance.generators.Length;
         public GeneratorDef Def(int i) => Balance.generators[i];
         public int Owned(int i) => State.generators[i].count;
-        public bool IsUnlocked(int i) => i == 0 || Owned(i) > 0 || Owned(i - 1) > 0;
+        public bool IsUnlocked(int i) => i < MaxGenerators && (i == 0 || Owned(i) > 0 || Owned(i - 1) > 0);
 
         /// <summary>Price of the next single unit.</summary>
-        double NextUnitCost(int i) => Def(i).baseCost * BuildingCostMultiplier * Math.Pow(Def(i).costGrowth, Owned(i));
+        double NextUnitCost(int i) =>
+            Def(i).baseCost * BuildingCostMultiplier * GalaxyCostMultiplier * Math.Pow(Def(i).costGrowth, Owned(i));
 
         /// <summary>Total cost of buying <paramref name="amount"/> units (geometric series).</summary>
         public double CostOf(int i, int amount)
@@ -131,7 +132,8 @@ namespace StellarIdle.Core
         public double PrestigeMultiplier => 1 + State.darkMatterEarned * PrestigeBonusPerPoint;
 
         public double PermanentMultiplier =>
-            PrestigeMultiplier * TreeProductionMultiplier * FleetGlobalMultiplier * (State.vip ? Balance.vipMultiplier : 1);
+            PrestigeMultiplier * SingularityMultiplier * TreeProductionMultiplier * FleetGlobalMultiplier
+            * GalaxyProductionMultiplier * (State.vip ? Balance.vipMultiplier : 1);
 
         public double GlobalMultiplier(long now) => PermanentMultiplier * (IsBoostActive(now) ? BoostMultiplier : 1);
 
@@ -149,7 +151,7 @@ namespace StellarIdle.Core
 
         public double ProductionPerSecond(long now) => RawProduction() * GlobalMultiplier(now);
 
-        public double TapValue(long now) =>
+        public double TapValue(long now) => TapsDisabled ? 0 :
             (Balance.tapBaseValue * GlobalMultiplier(now) + ProductionPerSecond(now) * (Balance.tapProductionShare + TreeTapShare))
             * TreeTapMultiplier * FleetTapMultiplier;
 
@@ -160,9 +162,12 @@ namespace StellarIdle.Core
             return v;
         }
 
+        /// <summary>Credits per second including automatic taps (skill tree "autoTap").</summary>
+        public double IncomePerSecond(long now) => ProductionPerSecond(now) + TapValue(now) * AutoTapsPerSecond;
+
         public void Tick(double deltaSeconds, long now)
         {
-            if (deltaSeconds > 0) Earn(ProductionPerSecond(now) * deltaSeconds);
+            if (deltaSeconds > 0) Earn(IncomePerSecond(now) * deltaSeconds);
         }
 
         public void Earn(double amount)
@@ -183,7 +188,7 @@ namespace StellarIdle.Core
             long since = State.lastSeenUnix;
             if (since <= 0 || now <= since) return OfflineReport.None; // first launch or clock moved back
             double elapsed = now - since;
-            if (elapsed < Balance.minOfflineSeconds) return OfflineReport.None;
+            if (elapsed < Balance.minOfflineSeconds || OfflineDisabled) return OfflineReport.None;
 
             double counted = Math.Min(elapsed, OfflineCapSeconds);
             double perSecond = RawProduction() * PermanentMultiplier * OfflineEfficiency;
@@ -248,31 +253,53 @@ namespace StellarIdle.Core
 
         // ---------- Prestige ----------
 
+        /// <summary>Dark Matter multipliers (tree, fleet, galaxy) applied on top of the base curve.</summary>
+        double DarkMatterMultipliers => DarkMatterGainMultiplier * FleetDarkMatterMultiplier * GalaxyDarkMatterMultiplier;
+
+        /// <summary>scale x (run earnings / divisor)^exponent: grows slowly with each order of magnitude.</summary>
         public double PendingDarkMatter =>
-            Math.Floor(Math.Sqrt(State.runEarnings / Balance.prestigeDivisor) * DarkMatterGainMultiplier * FleetDarkMatterMultiplier);
+            Math.Floor(Balance.prestigeScale * Math.Pow(State.runEarnings / Balance.prestigeDivisor, Balance.prestigeExponent)
+                       * DarkMatterMultipliers);
+
         public bool CanPrestige => PendingDarkMatter >= 1;
 
-        /// <summary>Earnings needed this run to be able to prestige for the first point.</summary>
-        public double PrestigeRequirement => Balance.prestigeDivisor;
+        /// <summary>Earnings needed this run to be able to warp for the first point.</summary>
+        public double PrestigeRequirement =>
+            Balance.prestigeDivisor * Math.Pow(1 / (Balance.prestigeScale * DarkMatterMultipliers), 1 / Balance.prestigeExponent);
 
         /// <summary>Production multiplier the player would have right after warping now.</summary>
         public double PrestigeMultiplierAfterWarp =>
             1 + (State.darkMatterEarned + PendingDarkMatter) * PrestigeBonusPerPoint;
 
-        public double Prestige()
+        /// <summary>Warps to <paramref name="nextGalaxyId"/> (or stays in the same galaxy when null or locked).</summary>
+        public double Prestige(string nextGalaxyId = null)
         {
             double gain = PendingDarkMatter;
             if (gain < 1) return 0;
+            LastRelicGalaxy = null;
+            AwardRelic(CurrentGalaxy);
             State.darkMatter += gain;
             State.darkMatterEarned += gain;
-            State.runEarnings = 0;
+
+            // Destinations are those unlocked before this warp (what the player was offered).
+            var next = FindGalaxy(nextGalaxyId);
+            if (next != null && IsGalaxyUnlocked(next)) State.currentGalaxy = next.id;
             State.prestigeCount++;
+
+            ResetRun();
+            LastWarpChest = RollShards(Balance.warpChestRolls);
+            return gain;
+        }
+
+        /// <summary>Clears what one run builds (credits, buildings, research) and grants the starting credits.</summary>
+        void ResetRun()
+        {
+            State.runEarnings = 0;
             foreach (var g in State.generators) g.count = 0;
             State.research.Clear();
             ReloadResearched();
-            State.credits = StartingCredits;
-            LastWarpChest = RollShards(Balance.warpChestRolls);
-            return gain;
+            // Without taps the first building could never be bought: always afford it.
+            State.credits = TapsDisabled ? Math.Max(StartingCredits, NextUnitCost(0)) : StartingCredits;
         }
 
         // ---------- Premium currency ----------

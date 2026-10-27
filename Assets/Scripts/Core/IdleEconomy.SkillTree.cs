@@ -17,7 +17,14 @@ namespace StellarIdle.Core
             return 0;
         }
 
-        public bool IsTierUnlocked(int tier) => State.darkMatterEarned >= SkillTiers[tier].unlockDarkMatter;
+        public bool IsTierUnlocked(int tier) =>
+            State.darkMatterEarned >= SkillTiers[tier].unlockDarkMatter && (!SkillTiers[tier].requiresGenesis || GenesisUnlocked);
+
+        /// <summary>Tiers reserved to the Genesis cosmic upgrade stay hidden until it is bought.</summary>
+        public bool IsTierVisible(int tier) => !SkillTiers[tier].requiresGenesis || GenesisUnlocked;
+
+        /// <summary>Max level of a node, raised by the "Expanded Mind" cosmic upgrade.</summary>
+        public int SkillMaxLevel(SkillNodeDef node) => node.maxLevel + TreeMaxLevelBonus;
 
         /// <summary>The node picked in this tier, or null if none yet.</summary>
         public SkillNodeDef ChosenNode(int tier)
@@ -34,7 +41,7 @@ namespace StellarIdle.Core
             return chosen != null && chosen != node;
         }
 
-        public bool IsSkillMaxed(SkillNodeDef node) => SkillLevel(node) >= node.maxLevel;
+        public bool IsSkillMaxed(SkillNodeDef node) => SkillLevel(node) >= SkillMaxLevel(node);
 
         public double SkillCost(int tier, SkillNodeDef node) => SkillCostAtLevel(tier, SkillLevel(node));
 
@@ -49,13 +56,8 @@ namespace StellarIdle.Core
         {
             if (!CanBuySkill(tier, node)) return false;
             State.darkMatter -= SkillCost(tier, node);
-            foreach (var n in State.skillNodes)
-            {
-                if (n.id != node.id) continue;
-                n.level++;
-                return true;
-            }
-            State.skillNodes.Add(new UpgradeLevel { id = node.id, level = 1 });
+            IncrementLevel(State.skillNodes, node.id);
+            InvalidateEffects();
             return true;
         }
 
@@ -97,73 +99,8 @@ namespace StellarIdle.Core
             State.darkMatter += SkillTreeInvested;
             State.skillNodes.Clear();
             State.freeRespecUsed = true;
+            InvalidateEffects();
             return true;
-        }
-
-        // ---------- Effects ----------
-
-        /// <summary>Sum of value x level over chosen nodes with this effect.</summary>
-        double SkillTotal(string effect)
-        {
-            double total = 0;
-            foreach (var tier in SkillTiers)
-                foreach (var node in tier.nodes)
-                    if (node.effect == effect) total += node.value * SkillLevel(node);
-            return total;
-        }
-
-        /// <summary>Product of (1 + value)^level, or (1 - value)^level when <paramref name="reduce"/>.</summary>
-        double SkillProduct(string effect, bool reduce = false)
-        {
-            double product = 1;
-            foreach (var tier in SkillTiers)
-                foreach (var node in tier.nodes)
-                    if (node.effect == effect)
-                        product *= Math.Pow(reduce ? 1 - node.value : 1 + node.value, SkillLevel(node));
-            return product;
-        }
-
-        int SkillLevels(string effect, out double value)
-        {
-            value = 0;
-            int levels = 0;
-            foreach (var tier in SkillTiers)
-                foreach (var node in tier.nodes)
-                {
-                    if (node.effect != effect || SkillLevel(node) == 0) continue;
-                    levels += SkillLevel(node);
-                    value = node.value;
-                }
-            return levels;
-        }
-
-        public double TreeProductionMultiplier =>
-            (1 + SkillTotal(SkillEffect.Production)) * SkillProduct(SkillEffect.ProductionMult);
-
-        public double TreeTapShare => SkillTotal(SkillEffect.Tap);
-        public double TreeTapMultiplier => 1 + SkillTotal(SkillEffect.TapMult);
-        public double TreeOfflineHours => SkillTotal(SkillEffect.OfflineHours);
-        public double TreeBoostHours => SkillTotal(SkillEffect.BoostHours);
-
-        public double BuildingCostMultiplier => Math.Max(0.1, SkillProduct(SkillEffect.Cost, reduce: true));
-        public double OfflineEfficiency => Math.Min(1, Balance.offlineEfficiency + SkillTotal(SkillEffect.OfflineEfficiency));
-        public double BoostMultiplier => Balance.boostMultiplier + SkillTotal(SkillEffect.BoostMultiplier);
-        public double BonusDropMultiplier => 1 + SkillTotal(SkillEffect.BonusDrop);
-        public double BonusDropIntervalMultiplier => Math.Max(0.3, 1 - SkillTotal(SkillEffect.BonusDropRate));
-        public int BonusDropMaxPerHour => Balance.bonusDropMaxPerHour + SkillLevels(SkillEffect.BonusDropRate, out _);
-        public double ResearchMultiplierValue => Balance.researchMultiplier + SkillTotal(SkillEffect.Research);
-        public double MilestoneMultiplierValue => Balance.milestoneMultiplier + SkillTotal(SkillEffect.Milestone);
-        public double DarkMatterGainMultiplier => 1 + SkillTotal(SkillEffect.DarkMatterGain);
-        public double PrestigeBonusPerPoint => Balance.prestigeBonusPerPoint + SkillTotal(SkillEffect.PrestigeBonus);
-
-        /// <summary>Credits granted at the start of each galaxy (after a warp).</summary>
-        public double StartingCredits
-        {
-            get
-            {
-                int levels = SkillLevels(SkillEffect.StartCredits, out double value);
-                return levels <= 0 ? 0 : value * Math.Pow(10, levels - 1);
-            }
         }
     }
 }

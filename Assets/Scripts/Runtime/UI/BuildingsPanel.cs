@@ -7,9 +7,13 @@ namespace StellarIdle.UI
     public sealed class BuildingsPanel : TabPanel
     {
         readonly ListRow[] rows;
+        readonly ListRow autoBuyRow;
+        readonly UnityEngine.UI.Text galaxyNote;
 
         public BuildingsPanel(UIContext ctx, Transform parent) : base(ctx, parent, "Buildings")
         {
+            galaxyNote = AddHeader("", 28, 60);
+            autoBuyRow = new ListRow(Content, "AutoBuy", ToggleAutoBuy, height: 130);
             rows = new ListRow[Eco.GeneratorCount];
             for (int i = 0; i < rows.Length; i++)
             {
@@ -21,11 +25,25 @@ namespace StellarIdle.UI
         public override void Refresh(long now)
         {
             var eco = Eco;
+            var galaxy = eco.CurrentGalaxy;
+            bool limited = galaxy != null && eco.MaxGenerators < eco.GeneratorCount;
+            galaxyNote.gameObject.SetActive(limited);
+            if (limited) galaxyNote.text = string.Format(Strings.GalaxyBuildingsLimit, galaxy.name, eco.MaxGenerators);
+
+            autoBuyRow.Visible = eco.AutoBuyUnlocked;
+            if (eco.AutoBuyUnlocked)
+            {
+                bool on = eco.State.autoBuyEnabled;
+                autoBuyRow.SetIcon(null, on ? Theme.Buy : Theme.Disabled, "A");
+                autoBuyRow.SetTexts(Strings.AutoBuyTitle, on ? Strings.AutoBuyOn : Strings.AutoBuyOff);
+                autoBuyRow.SetButton(on ? Strings.On : Strings.Off, true, on ? Theme.Buy : Theme.PanelLight);
+            }
+
             for (int i = 0; i < rows.Length; i++)
             {
                 var row = rows[i];
                 bool unlocked = eco.IsUnlocked(i);
-                bool teaser = !unlocked && i > 0 && eco.IsUnlocked(i - 1);
+                bool teaser = !unlocked && i > 0 && i < eco.MaxGenerators && eco.IsUnlocked(i - 1);
                 row.Visible = unlocked || teaser;
                 if (!row.Visible) continue;
 
@@ -53,6 +71,12 @@ namespace StellarIdle.UI
 
                 row.SetButton($"{Strings.Buy} x{amount}\n{NumberFormat.Format(cost)}", eco.CanAfford(i, amount), Theme.Buy);
             }
+        }
+
+        void ToggleAutoBuy()
+        {
+            Eco.State.autoBuyEnabled = !Eco.State.autoBuyEnabled;
+            Ctx.RequestRefresh();
         }
 
         void Buy(int index)

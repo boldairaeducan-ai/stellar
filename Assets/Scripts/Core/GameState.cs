@@ -42,7 +42,7 @@ namespace StellarIdle.Core
     [Serializable]
     public class GameState
     {
-        public const int CurrentVersion = 4;
+        public const int CurrentVersion = 5;
 
         public int version = CurrentVersion;
         public double credits;
@@ -68,6 +68,14 @@ namespace StellarIdle.Core
         public List<string> fleet = new List<string>();                 // equipped ship ids
         public List<ExpeditionSave> expeditions = new List<ExpeditionSave>();
         public bool starterShipGiven;
+        public string currentGalaxy = "";
+        public List<UpgradeLevel> relics = new List<UpgradeLevel>();       // id = galaxy id
+        public double singularities;        // Big Crunch currency, spendable
+        public double singularitiesEarned;  // all ever earned (drives the passive bonus)
+        public int crunchCount;
+        public double crunchStartDarkMatter; // Dark Matter granted at the start of the cycle (not earned by warps)
+        public List<UpgradeLevel> cosmicUpgrades = new List<UpgradeLevel>();
+        public bool autoBuyEnabled = true;
         public int distressSignalDay;    // local day number of the last claim
         public int distressStreak;       // consecutive days claimed
 
@@ -112,6 +120,11 @@ namespace StellarIdle.Core
             ships ??= new List<ShipSave>();
             fleet ??= new List<string>();
             expeditions ??= new List<ExpeditionSave>();
+            relics ??= new List<UpgradeLevel>();
+            cosmicUpgrades ??= new List<UpgradeLevel>();
+            currentGalaxy ??= "";
+            singularities = Clean(singularities);
+            singularitiesEarned = Clean(singularitiesEarned);
             achievementsClaimed ??= new List<string>();
 
             if (version < 2) darkMatterEarned = Math.Max(darkMatterEarned, darkMatter); // v1 had no spending
@@ -120,6 +133,14 @@ namespace StellarIdle.Core
                 // v2 linear upgrades were replaced by the skill tree: refund everything that was spent.
                 darkMatter = darkMatterEarned;
                 darkMatterUpgrades.Clear();
+            }
+            if (version < 5)
+            {
+                // v5 rebalanced Dark Matter (much slower curve, pricier tree): pre-release saves are
+                // scaled down and the tree is refunded so the new costs apply.
+                darkMatterEarned = Math.Min(darkMatterEarned, 20);
+                darkMatter = darkMatterEarned;
+                skillNodes.Clear();
             }
             version = CurrentVersion;
         }
